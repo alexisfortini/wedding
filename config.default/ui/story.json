@@ -1,0 +1,16 @@
+{
+  "title": "Our Story",
+  "subtitle": "How it started",
+  "timeline": [
+    {
+      "year": "Spring 2023",
+      "title": "The First Chapter",
+      "description": "A chance encounter over spilled coffee in a crowded café. What began as a sincere apology turned into a conversation that lasted until the doors locked."
+    },
+    {
+      "year": "Winter 2025",
+      "title": "The Question",
+      "description": "Under a canopy of stars in a quiet national park. It was quiet, perfectly imperfect, and the easiest 'yes' either of us has ever said."
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+# This file instructs gcloud to omit files from uploads.
+.gcloudignore
+
+# Git history and metadata
+.git
+.gitignore
+
+# Package manager folders
+node_modules/
+
+# Build artifacts
+.next/
+out/
+build/
+
+# Local env files
+.env.local
+.env.*.local
+
+# Database backups and scratch files
+database_backups/
+scratch/
+walkthrough.md
+task.md
+implementation_plan.md

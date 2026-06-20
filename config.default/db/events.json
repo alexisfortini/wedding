@@ -1,0 +1,46 @@
+[
+  {
+    "title": "Welcome Dinner",
+    "description": "Kick off the wedding weekend with dinner and drinks.",
+    "date": "2026-06-19",
+    "start_time": "18:00:00",
+    "end_time": "21:00:00",
+    "location": "The Hotel Patio",
+    "dress_code": "Casual",
+    "is_public": true,
+    "group": null
+  },
+  {
+    "title": "The Wedding Ceremony",
+    "description": "The big event under the stars.",
+    "date": "2026-06-20",
+    "start_time": "17:00:00",
+    "end_time": "23:00:00",
+    "location": "The Garden Lawn",
+    "dress_code": "Formal",
+    "is_public": true,
+    "group": null
+  },
+  {
+    "title": "Bachelor Party Excursion",
+    "description": "A fun day out for the bachelor party.",
+    "date": "2026-06-18",
+    "start_time": "12:00:00",
+    "end_time": "18:00:00",
+    "location": "The Golf Course",
+    "dress_code": "Sporty",
+    "is_public": false,
+    "group": "Bachelor Party"
+  },
+  {
+    "title": "Bridal Shower",
+    "description": "A wonderful morning brunch.",
+    "date": "2026-06-18",
+    "start_time": "10:30:00",
+    "end_time": "13:00:00",
+    "location": "The Cafe Bistro",
+    "dress_code": "Garden Party",
+    "is_public": false,
+    "group": "Bridal Party"
+  }
+]

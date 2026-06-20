@@ -1,0 +1,45 @@
+[
+  {
+    "party_name": "Groom & Bride Party",
+    "guests": [
+      {
+        "first_name": "Groom",
+        "last_name": "Name",
+        "email": "groom@example.com",
+        "phone": "555-0100",
+        "address": "123 Palm Oasis Dr, Palm Springs, CA 92262",
+        "groups": ["Bachelor Party", "Admin"]
+      },
+      {
+        "first_name": "Bride",
+        "last_name": "Name",
+        "email": "bride@example.com",
+        "phone": "555-0200",
+        "address": "123 Palm Oasis Dr, Palm Springs, CA 92262",
+        "groups": ["Bridal Party", "Admin"]
+      }
+    ]
+  },
+  {
+    "party_name": "Hartfelder Household",
+    "guests": [
+      {
+        "first_name": "Gayle",
+        "last_name": "Hartfelder",
+        "email": "gayle@example.com",
+        "phone": "555-0300",
+        "address": "789 Saguaro Way, Rancho Mirage, CA 92270",
+        "groups": ["Admin"],
+        "plus_ones_allowed": 1
+      },
+      {
+        "first_name": "Jack",
+        "last_name": "Hartfelder",
+        "email": "jack@example.com",
+        "phone": "555-0400",
+        "address": "789 Saguaro Way, Rancho Mirage, CA 92270",
+        "groups": ["Admin"]
+      }
+    ]
+  }
+]

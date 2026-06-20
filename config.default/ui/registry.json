@@ -1,0 +1,20 @@
+{
+  "title": "Registry",
+  "description": "Your presence is our greatest gift. Should you wish to honor us, we have registered a few dreams below.",
+  "funds": [
+    {
+      "title": "Honeymoon Fund",
+      "description": "Contribute toward our tropical getaway next summer, creating memories that will last a lifetime.",
+      "button_text": "Send a Gift",
+      "icon": "Heart",
+      "url": "https://www.zola.com/registry/alexisandkelsey"
+    },
+    {
+      "title": "Couch Fund",
+      "description": "Help us feather our nest! Contribute toward a beautiful new sofa for our living room.",
+      "button_text": "Send a Gift",
+      "icon": "Gift",
+      "url": "https://www.zola.com/registry/alexisandkelsey"
+    }
+  ]
+}

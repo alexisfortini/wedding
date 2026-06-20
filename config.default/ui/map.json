@@ -1,0 +1,14 @@
+{
+  "zoom": 10,
+  "center": [-116.42, 33.70],
+  "locations": [
+    { "id": "venue", "name": "The Bougainvillea Estate", "lat": 33.6868, "lng": -116.2639, "type": "Venue", "icon": "Home", "color": "#D91C5C" },
+    { "id": "psp", "name": "Palm Springs Intl. Airport (PSP)", "lat": 33.8297, "lng": -116.5065, "type": "Airport", "icon": "Plane", "color": "#64748B" },
+    { "id": "laquinta", "name": "La Quinta Resort", "lat": 33.693, "lng": -116.305, "type": "Hotel", "icon": "Bed", "color": "#38BDF8" },
+    { "id": "gondola", "name": "Palm Springs Aerial Tramway", "lat": 33.8372, "lng": -116.6142, "type": "Activities", "icon": "TramFront", "color": "#8B5CF6" },
+    { "id": "artmuseum", "name": "Palm Springs Art Museum", "lat": 33.8244, "lng": -116.5492, "type": "Activities", "icon": "Palette", "color": "#8B5CF6" },
+    { "id": "moorten", "name": "Moorten Botanical Garden", "lat": 33.8048, "lng": -116.5463, "type": "Activities", "icon": "Flower", "color": "#8B5CF6" },
+    { "id": "airmuseum", "name": "Palm Springs Air Museum", "lat": 33.828, "lng": -116.495, "type": "Activities", "icon": "Plane", "color": "#8B5CF6" },
+    { "id": "pologrounds", "name": "Empire Polo Club (Coachella Grounds)", "lat": 33.680, "lng": -116.236, "type": "Activities", "icon": "Music", "color": "#8B5CF6" }
+  ]
+}

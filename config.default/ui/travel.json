@@ -1,0 +1,40 @@
+{
+  "title": "Travel & Accommodations",
+  "description": "Getting to our desert home and finding a beautiful place to rest.",
+  "airports": [
+    {
+      "title": "Palm Springs (PSP)",
+      "description": "The most convenient gateway. Less than 40 minutes from the celebration.",
+      "tag": "Highly Recommended"
+    },
+    {
+      "title": "Los Angeles (LAX)",
+      "description": "More flight paths, but requires a scenic 2.5 to 3.5 hour drive depending on traffic.",
+      "tag": "Rental Car Needed"
+    }
+  ],
+  "hotels": [
+    {
+      "title": "La Quinta Resort",
+      "description": "A historic desert sanctuary featuring multiple pools, gardens, and clay tennis courts.",
+      "book_url": "#"
+    },
+    {
+      "title": "JW Marriott Desert Springs",
+      "description": "Sprawling lakeside resort with boat rides, palm tree trails, and local desert wildlife.",
+      "book_url": "#"
+    }
+  ],
+  "favorites": [
+    {
+      "title": "Local Coffee Shop",
+      "description": "Our favorite local morning routine for signature cold brews and organic matchas.",
+      "icon": "Coffee"
+    },
+    {
+      "title": "Joshua Tree National Park",
+      "description": "A breathtaking national park filled with Mojave wilderness. Best viewed at dawn.",
+      "icon": "MapPin"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #F7F4EB;
+  --color-foreground: #2D2B2A;
+  --color-cream: #F7F4EB;
+  --color-charcoal: #2D2B2A;
+  --color-sage: #8A9A86;
+  --color-olive: #6B705C;
+  --color-terracotta: #C86B5E;
+  
+  --font-serif: var(--font-cormorant);
+  --font-sans: var(--font-inter);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-sage);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    @apply font-sans tracking-wide;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-normal text-sage;
+  }
+}
+
+@layer utilities {
+  .shadow-debossed {
+    box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.05), inset -1px -1px 3px rgba(255, 255, 255, 0.5);
+  }
+  .text-debossed {
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.7), -1px -1px 1px rgba(0, 0, 0, 0.05);
+  }
+}
+
+.responsive-bg-image {
+  background-position: var(--mobile-pos, center) !important;
+  transform: scale(var(--mobile-scale, 1)) !important;
+  transition: transform 0.2s ease-out, background-position 0.2s ease-out;
+}
+
+@media (min-width: 768px) {
+  .responsive-bg-image {
+    background-position: var(--desktop-pos, center) !important;
+    transform: scale(var(--desktop-scale, 1)) !important;
+  }
+}
+
+.responsive-img-style {
+  object-position: var(--mobile-pos, center) !important;
+  transform: scale(var(--mobile-scale, 1)) !important;
+  transition: transform 0.2s ease-out, object-position 0.2s ease-out;
+}
+
+@media (min-width: 768px) {
+  .responsive-img-style {
+    object-position: var(--desktop-pos, center) !important;
+    transform: scale(var(--desktop-scale, 1)) !important;
+  }
+}
+

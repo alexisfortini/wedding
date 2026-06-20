@@ -1,0 +1,18 @@
+{
+  "title": "The Music Lineup",
+  "subtitle": "Setting the tone under the sky. Bring your dancing shoes.",
+  "events": [
+    {
+      "name": "Welcome Soirée",
+      "lineup": [
+        { "time": "7:00 PM", "dj": "DJ SAGE & SOUND" }
+      ]
+    },
+    {
+      "name": "The Celebration",
+      "lineup": [
+        { "time": "8:00 PM", "dj": "DJ HOUSE OF HEARTS" }
+      ]
+    }
+  ]
+}
