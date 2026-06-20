@@ -1,6 +1,6 @@
-# 🌵 Desert Chic Wedding Invitation & Concierge Website
+# 💍 Customizable Wedding Invitation & Concierge Website Template
 
-Welcome to a premium, desert-chic, and highly customizable Next.js wedding invitation website. This project is built for modern couples who want a stunning, responsive invitation portal complete with interactive guest management, personalized itineraries, map guides, and a built-in AI concierge assistant. 
+Welcome to a premium, elegant, and highly customizable Next.js wedding invitation website template. This project is built for modern couples who want a stunning, responsive invitation portal complete with interactive guest management, personalized itineraries, map guides, and a built-in AI concierge assistant. 
 
 ---
 
