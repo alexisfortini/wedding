@@ -210,7 +210,11 @@ export default function AdminPage() {
       if (confirm("Configuration saved to Supabase!\n\nWould you like to sync these changes to your local project files right now?")) {
         setIsSyncing(true);
         try {
-          const res = await fetch("/api/sync-supabase-to-local", { method: "POST" });
+          const currentPasscode = sessionStorage.getItem("wedding_admin_passcode") || "";
+          const res = await fetch("/api/sync-supabase-to-local", {
+            method: "POST",
+            headers: { "x-admin-passcode": currentPasscode }
+          });
           const data = await res.json();
           if (data.success) {
             if (data.environment === "production") {
@@ -574,6 +578,7 @@ export default function AdminPage() {
     if (passcode === adminConfig.passcode) {
       setIsAuthenticated(true);
       sessionStorage.setItem("wedding_admin_passcode_verified", "true");
+      sessionStorage.setItem("wedding_admin_passcode", passcode);
       await refreshData();
       setPasscodeError("");
     } else {
@@ -585,6 +590,7 @@ export default function AdminPage() {
     setIsAuthenticated(false);
     setIsAdmin(false);
     sessionStorage.removeItem("wedding_admin_passcode_verified");
+    sessionStorage.removeItem("wedding_admin_passcode");
     localStorage.removeItem("wedding_guest");
     setGuestSession(null);
     window.location.href = "/";

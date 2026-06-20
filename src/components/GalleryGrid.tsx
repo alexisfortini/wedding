@@ -171,9 +171,13 @@ export default function GalleryGrid({ photos }: GalleryGridProps) {
     setGalleryConfig(newConfig);
 
     try {
+      const currentPasscode = typeof window !== "undefined" ? sessionStorage.getItem("wedding_admin_passcode") || "" : "";
       await fetch("/api/save-site-config", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-admin-passcode": currentPasscode
+        },
         body: JSON.stringify({
           key: "gallery",
           value: newConfig

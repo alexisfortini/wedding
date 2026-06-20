@@ -462,9 +462,13 @@ export const mockDatabase = {
       const backupData = await mockDatabase.exportDatabaseJSON();
       const backupId = `backup_${Date.now()}`;
       
+      const passcode = typeof window !== "undefined" ? sessionStorage.getItem("wedding_admin_passcode") || "" : "";
       const res = await fetch("/api/save-site-config", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-admin-passcode": passcode
+        },
         body: JSON.stringify({
           key: backupId,
           value: {
@@ -494,9 +498,13 @@ export const mockDatabase = {
       if (error) throw error;
       if (data && data.length > 50) {
         const keysToDelete = data.slice(50).map(item => item.key);
+        const passcode = typeof window !== "undefined" ? sessionStorage.getItem("wedding_admin_passcode") || "" : "";
         const res = await fetch("/api/save-site-config", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "x-admin-passcode": passcode
+          },
           body: JSON.stringify({
             action: "delete",
             keys: keysToDelete
@@ -623,9 +631,13 @@ export const mockDatabase = {
   },
 
   saveSiteConfig: async (key: string, value: any): Promise<void> => {
+    const passcode = typeof window !== "undefined" ? sessionStorage.getItem("wedding_admin_passcode") || "" : "";
     const res = await fetch("/api/save-site-config", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "x-admin-passcode": passcode
+      },
       body: JSON.stringify({ key, value })
     });
     const data = await res.json();

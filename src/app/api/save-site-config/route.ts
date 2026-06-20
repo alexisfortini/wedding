@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
+    const passcodeHeader = req.headers.get("x-admin-passcode");
     const { action, key, value, keys } = await req.json();
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,6 +14,19 @@ export async function POST(req: Request) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Verify admin passcode before allowing any writes
+    const { data: adminConfigRow } = await supabase
+      .from("site_configs")
+      .select("value")
+      .eq("key", "admin")
+      .single();
+    
+    const correctPasscode = adminConfigRow?.value?.passcode || "indio2027";
+
+    if (!passcodeHeader || passcodeHeader !== correctPasscode) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Invalid admin passcode" }, { status: 401 });
+    }
 
     if (action === "delete") {
       if (!keys || !Array.isArray(keys)) {
