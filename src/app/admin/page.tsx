@@ -143,6 +143,16 @@ export default function AdminPage() {
   const [tempPartyMembers, setTempPartyMembers] = useState<Guest[]>([]);
   const [selectedGuestToAdd, setSelectedGuestToAdd] = useState<string>("");
 
+  const plannerGroup = groups.find(g => g.name === "Planner");
+  const plannerGuestIds = new Set(
+    guestGroups
+      .filter(gg => plannerGroup && gg.group_id === plannerGroup.id)
+      .map(gg => gg.guest_id)
+  );
+
+  const nonPlannerGuests = guests.filter(g => !plannerGuestIds.has(g.id));
+  const planners = guests.filter(g => plannerGuestIds.has(g.id));
+  const nonPlannerParties = parties.filter(p => p.name !== "Planners" && p.name !== "Planner");
 
   // Load everything from database
   const refreshData = async () => {
@@ -966,7 +976,7 @@ export default function AdminPage() {
   };
 
   const getSortedGuests = () => {
-    return [...guests].sort((a, b) => {
+    return [...nonPlannerGuests].sort((a, b) => {
       let valA: any = "";
       let valB: any = "";
 
@@ -2458,7 +2468,7 @@ export default function AdminPage() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-[11px] font-sans px-3 py-1 bg-olive/10 text-olive rounded-full border border-olive/10 font-medium">
-              Guests: {guests.length} ({guests.length + guests.reduce((sum, g) => sum + (g.plus_ones_allowed || 0), 0)}) | Groups: {parties.length} | Events: {events.length}
+              Guests: {nonPlannerGuests.length} ({nonPlannerGuests.length + nonPlannerGuests.reduce((sum, g) => sum + (g.plus_ones_allowed || 0), 0)}) | Groups: {nonPlannerParties.length} | Events: {events.length}
             </span>
             <button 
               onClick={handleLogout}
@@ -2859,7 +2869,7 @@ export default function AdminPage() {
                         {renderSortIcon("last_name")}
                       </div>
                     </th>
-                    <th className="py-4 px-4 font-semibold whitespace-nowrap w-[150px]">Contact</th>
+                    <th className="py-4 px-4 font-semibold whitespace-nowrap w-[150px]">Email</th>
                     <th className="py-4 px-4 font-semibold whitespace-nowrap w-[150px]">Mailing Address</th>
                     <th 
                       onClick={() => handleSort("party_name")} 
@@ -2901,7 +2911,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sage/10 text-charcoal/80">
-                  {guests.length === 0 ? (
+                  {nonPlannerGuests.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="py-12 text-center text-charcoal/40 font-serif text-base">
                         No guests added yet. Add your first guest above!
@@ -2936,7 +2946,6 @@ export default function AdminPage() {
                         </td>
                         <td className="py-4 px-4 leading-relaxed font-sans text-[11px] w-[150px] max-w-[150px] truncate">
                           <div className="truncate" title={g.email || ""}>{g.email || <span className="opacity-40 italic">No email</span>}</div>
-                          <div className="opacity-55 mt-0.5 truncate" title={g.phone || ""}>{g.phone || <span className="opacity-40 italic">No phone</span>}</div>
                         </td>
                         <td className="py-4 px-4 font-sans text-[11px] leading-relaxed max-w-[150px] w-[150px] truncate" title={g.address || ""}>
                           {g.address || <span className="opacity-40 italic">No address</span>}
@@ -3007,6 +3016,106 @@ export default function AdminPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Planners Management Section */}
+            <div className="pt-8 border-t border-sage/20 mt-12">
+              <div className="bg-white border border-sage/15 p-6 rounded-sm shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                  <div>
+                    <h3 className="text-lg font-serif text-charcoal flex items-center gap-2">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-olive animate-pulse"></span>
+                      Wedding Planners ({planners.length})
+                    </h3>
+                    <p className="text-xs text-charcoal/50 mt-1">Planners are hidden from the main guest table and counts but can be managed here.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingGuest(null);
+                      setNewGuestData({
+                        first_name: "",
+                        last_name: "",
+                        email: "",
+                        phone: "",
+                        party_id: "",
+                        rsvp_status: "pending",
+                        notes: "",
+                        selectedGroups: plannerGroup ? [plannerGroup.id] : [],
+                        is_plus_one: false,
+                        parent_guest_id: "",
+                        plus_ones_allowed: 0,
+                        age: "Adult",
+                        needs_highchair: false,
+                        in_wheelchair: false,
+                        address: ""
+                      });
+                      setShowAddGuest(true);
+                    }}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-sage text-sage text-[10px] uppercase tracking-widest hover:bg-sage hover:text-white rounded-sm font-semibold transition-all cursor-pointer"
+                  >
+                    <Plus size={12} />
+                    Add Planner
+                  </button>
+                </div>
+
+                {planners.length === 0 ? (
+                  <p className="text-xs text-charcoal/40 italic py-4 text-center border border-dashed border-sage/20 bg-cream/10 rounded-sm">No wedding planners registered yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {planners.map(p => (
+                      <div key={p.id} className="flex items-center justify-between p-4 border border-sage/15 bg-cream/5 rounded-sm hover:border-sage/30 transition-all">
+                        <div>
+                          <div className="font-serif text-sm font-medium text-charcoal">{p.first_name} {p.last_name}</div>
+                          <div className="text-[11px] text-charcoal/50 mt-0.5">{p.email || <span className="italic opacity-55">No email</span>}</div>
+                          {p.phone && <div className="text-[10px] text-charcoal/40 mt-0.5">{p.phone}</div>}
+                        </div>
+                        <div className="flex space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEditingGuest(p);
+                              const matchedGroups = guestGroups
+                                .filter(gg => gg.guest_id === p.id)
+                                .map(gg => gg.group_id);
+                              setNewGuestData({
+                                first_name: p.first_name,
+                                last_name: p.last_name,
+                                email: p.email || "",
+                                phone: p.phone || "",
+                                party_id: p.party_id || "",
+                                rsvp_status: p.rsvp_status,
+                                notes: p.notes || "",
+                                selectedGroups: matchedGroups,
+                                is_plus_one: !!p.is_plus_one,
+                                parent_guest_id: p.parent_guest_id || "",
+                                plus_ones_allowed: p.plus_ones_allowed || 0,
+                                age: p.age || "Adult",
+                                needs_highchair: !!p.needs_highchair,
+                                in_wheelchair: !!p.in_wheelchair,
+                                address: p.address || ""
+                              });
+                              setShowAddGuest(true);
+                            }}
+                            className="p-1.5 border border-sage/35 text-sage hover:bg-sage/5 transition-all rounded-sm cursor-pointer"
+                            title="Edit details"
+                          >
+                            <Edit3 size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteGuest(p.id)}
+                            className="p-1.5 border border-rose-200 text-rose-500 hover:bg-rose-50 hover:border-rose-300 transition-all rounded-sm cursor-pointer"
+                            title="Remove planner"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
