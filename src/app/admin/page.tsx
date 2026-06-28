@@ -139,6 +139,9 @@ export default function AdminPage() {
   const [isEditingParty, setIsEditingParty] = useState<Party | null>(null);
   const [newPartyName, setNewPartyName] = useState("");
   const [showAddParty, setShowAddParty] = useState(false);
+  const [tempPartyMembers, setTempPartyMembers] = useState<Guest[]>([]);
+  const [selectedGuestToAdd, setSelectedGuestToAdd] = useState<string>("");
+
 
   // Load everything from database
   const refreshData = async () => {
@@ -710,8 +713,31 @@ export default function AdminPage() {
       name: newPartyName.trim()
     };
     await mockDatabase.saveParty(partyToSave);
+
+    // Save household members reassignments
+    const originalMembers = guests.filter(g => g.party_id === partyId);
+    const tempMemberIds = tempPartyMembers.map(m => m.id);
+
+    // Add selected ones
+    for (const g of tempPartyMembers) {
+      if (g.party_id !== partyId) {
+        const updated = { ...g, party_id: partyId };
+        await mockDatabase.saveGuest(updated);
+      }
+    }
+
+    // Remove ones that were deselected
+    for (const g of originalMembers) {
+      if (!tempMemberIds.includes(g.id)) {
+        const updated = { ...g, party_id: null };
+        await mockDatabase.saveGuest(updated);
+      }
+    }
+
     setNewPartyName("");
     setIsEditingParty(null);
+    setTempPartyMembers([]);
+    setSelectedGuestToAdd("");
     setShowAddParty(false);
     await refreshData();
   };
@@ -719,8 +745,11 @@ export default function AdminPage() {
   const handleEditPartyClick = (party: Party) => {
     setIsEditingParty(party);
     setNewPartyName(party.name);
+    const members = guests.filter(g => g.party_id === party.id);
+    setTempPartyMembers(members);
     setShowAddParty(true);
   };
+
 
   const handleDeleteParty = async (id: string) => {
     if (confirm("Are you sure you want to delete this party? Household members will remain in the database as individuals (No Party).")) {
@@ -2980,48 +3009,131 @@ export default function AdminPage() {
             </div>
 
             {showAddParty && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="bg-white border border-sage/20 p-5 max-w-md shadow-sm rounded-sm space-y-4"
+              <div 
+                onClick={() => {
+                  setShowAddParty(false);
+                  setIsEditingParty(null);
+                  setTempPartyMembers([]);
+                  setSelectedGuestToAdd("");
+                }}
+                className="fixed inset-0 z-50 bg-charcoal/40 backdrop-blur-sm flex items-center justify-center p-4"
               >
-                <h3 className="text-base font-serif text-charcoal">
-                  {isEditingParty ? "Edit Household / Party" : "Create New Household / Party"}
-                </h3>
-                <form onSubmit={handleSaveParty} className="space-y-3">
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1 font-semibold">Household Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={newPartyName}
-                      onChange={e => setNewPartyName(e.target.value)}
-                      placeholder="e.g. Alexis Fortini & Kelsey Hartfelder"
-                      className="w-full border border-sage/35 p-2 text-sm outline-none focus:border-sage rounded-sm"
-                    />
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNewPartyName("");
-                        setIsEditingParty(null);
-                        setShowAddParty(false);
-                      }}
-                      className="px-4 py-2 border border-sage/35 text-sage text-xs uppercase tracking-widest hover:bg-sage/5 rounded-sm cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-sage text-white text-xs uppercase tracking-widest hover:bg-sage/95 rounded-sm font-semibold cursor-pointer"
-                    >
-                      {isEditingParty ? "Save Changes" : "Save"}
-                    </button>
-                  </div>
-                </form>
-              </motion.div>
+                <motion.div
+                  onClick={e => e.stopPropagation()}
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white border border-sage/20 p-6 md:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-md rounded-sm space-y-6"
+                >
+                  <h3 className="text-2xl font-serif text-charcoal">
+                    {isEditingParty ? "Edit Household Details" : "Create New Household"}
+                  </h3>
+                  
+                  <form onSubmit={handleSaveParty} className="space-y-6">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">Household Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={newPartyName}
+                        onChange={e => setNewPartyName(e.target.value)}
+                        placeholder="e.g. Alexis Fortini & Kelsey Hartfelder"
+                        className="w-full border border-sage/35 p-2 bg-cream/20 text-sm outline-none focus:border-sage rounded-sm font-serif text-base animate-none"
+                      />
+                    </div>
+
+                    {/* Household Members */}
+                    <div className="space-y-3">
+                      <h4 className="text-[10px] uppercase tracking-widest text-charcoal/50 font-semibold">Household Members</h4>
+                      <div className="border border-sage/20 p-3 bg-cream/10 rounded-sm space-y-2 max-h-[180px] overflow-y-auto">
+                        {tempPartyMembers.length === 0 ? (
+                          <p className="text-xs italic text-charcoal/40 p-1">No members added to this household yet.</p>
+                        ) : (
+                          tempPartyMembers.map(m => (
+                            <div key={m.id} className="flex items-center justify-between bg-white/50 px-2 py-1.5 border border-sage/10 rounded-sm">
+                              <span className="font-serif text-sm">
+                                {m.first_name} {m.last_name}
+                                {m.is_plus_one && (
+                                  <span className="ml-1.5 px-1 py-0.5 text-[7px] bg-terracotta/15 text-terracotta rounded-sm uppercase tracking-wider font-sans font-bold">
+                                    +1
+                                  </span>
+                                )}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTempPartyMembers(tempPartyMembers.filter(member => member.id !== m.id));
+                                }}
+                                className="text-xs text-rose-600 hover:text-rose-800 uppercase tracking-wider font-semibold font-sans px-2 py-1 rounded hover:bg-rose-50 transition-colors"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Add Guest to Household */}
+                    <div className="space-y-2 border-t border-dashed border-sage/20 pt-4">
+                      <h4 className="text-[10px] uppercase tracking-widest text-charcoal/50 font-semibold">Add Member to Household</h4>
+                      <div className="flex gap-2">
+                        <select
+                          value={selectedGuestToAdd}
+                          onChange={e => setSelectedGuestToAdd(e.target.value)}
+                          className="flex-1 border border-sage/35 p-2 bg-cream/20 text-xs sm:text-sm outline-none focus:border-sage rounded-sm"
+                        >
+                          <option value="">Select a guest to add...</option>
+                          {guests
+                            .filter(g => !tempPartyMembers.some(tm => tm.id === g.id))
+                            .map(g => (
+                              <option key={g.id} value={g.id}>
+                                {g.first_name} {g.last_name} {g.party_id ? `(Current Party: ${parties.find(p => p.id === g.party_id)?.name || ''})` : ''}
+                              </option>
+                            ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!selectedGuestToAdd) return;
+                            const guestToAdd = guests.find(g => g.id === selectedGuestToAdd);
+                            if (guestToAdd) {
+                              setTempPartyMembers([...tempPartyMembers, guestToAdd]);
+                              setSelectedGuestToAdd("");
+                            }
+                          }}
+                          className="px-4 py-2 bg-sage text-white text-xs uppercase tracking-widest hover:bg-sage/90 rounded-sm font-semibold transition-all cursor-pointer font-sans"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-3 pt-4 border-t border-sage/15">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewPartyName("");
+                          setIsEditingParty(null);
+                          setTempPartyMembers([]);
+                          setSelectedGuestToAdd("");
+                          setShowAddParty(false);
+                        }}
+                        className="flex-1 py-3 border border-sage/35 text-sage text-xs uppercase tracking-widest rounded-sm hover:bg-sage/5 transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 py-3 bg-sage text-white text-xs uppercase tracking-widest hover:bg-sage/95 transition-all rounded-sm font-semibold"
+                      >
+                        {isEditingParty ? "Save Changes" : "Save"}
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              </div>
             )}
+
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {parties.map(party => {
