@@ -2453,7 +2453,7 @@ export default function AdminPage() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-[11px] font-sans px-3 py-1 bg-olive/10 text-olive rounded-full border border-olive/10 font-medium">
-              Guests: {guests.length} | Events: {events.length}
+              Guests: {guests.length} | Groups: {parties.length} | Events: {events.length}
             </span>
             <button 
               onClick={handleLogout}
