@@ -213,6 +213,24 @@ DEFAULT_GUESTS.forEach(g => {
   });
 });
 
+// Helper for secure admin write mutations to bypass RLS policies
+async function adminDbWrite(action: string, payload: any): Promise<any> {
+  const passcode = typeof window !== "undefined" ? sessionStorage.getItem("wedding_admin_passcode") || "" : "";
+  const res = await fetch("/api/admin-db", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-passcode": passcode
+    },
+    body: JSON.stringify({ action, payload })
+  });
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error || `Failed to execute administrative write: ${action}`);
+  }
+  return data.data;
+}
+
 // Database implementation using Supabase directly as the single source of truth
 export const mockDatabase = {
   getParties: async (): Promise<Party[]> => {
@@ -221,15 +239,10 @@ export const mockDatabase = {
     return data || [];
   },
   saveParty: async (party: Party): Promise<void> => {
-    const { error } = await supabase.from("parties").upsert({
-      id: party.id,
-      name: party.name
-    });
-    if (error) throw error;
+    await adminDbWrite("saveParty", { party });
   },
   deleteParty: async (id: string): Promise<void> => {
-    const { error } = await supabase.from("parties").delete().eq("id", id);
-    if (error) throw error;
+    await adminDbWrite("deleteParty", { id });
   },
 
   getGuests: async (): Promise<Guest[]> => {
@@ -242,47 +255,10 @@ export const mockDatabase = {
     return data || [];
   },
   saveGuest: async (guest: Guest): Promise<void> => {
-    const { error } = await supabase.from("guests").upsert({
-      id: guest.id,
-      first_name: guest.first_name,
-      last_name: guest.last_name,
-      email: guest.email,
-      phone: guest.phone,
-      party_id: guest.party_id,
-      address: guest.address,
-      rsvp_status: guest.rsvp_status,
-      notes: guest.notes,
-      is_plus_one: guest.is_plus_one,
-      parent_guest_id: guest.parent_guest_id,
-      plus_ones_allowed: guest.plus_ones_allowed,
-      age: guest.age,
-      needs_highchair: guest.needs_highchair,
-      in_wheelchair: guest.in_wheelchair
-    });
-    if (error) throw error;
-
-    // Link events mapping for all public events on save
-    try {
-      const dbEvents = await mockDatabase.getEvents();
-      const publicEvents = dbEvents.filter(e => e.is_public);
-      for (const e of publicEvents) {
-        await mockDatabase.linkGuestEvent(guest.id, e.id);
-      }
-    } catch (e) {
-      console.error("Error auto-linking public events on save:", e);
-    }
-
-    // If guest is a +1, link to private events parent is linked to
-    if (guest.is_plus_one && guest.parent_guest_id) {
-      const parentEvents = (await mockDatabase.getGuestEvents()).filter(ge => ge.guest_id === guest.parent_guest_id);
-      for (const pe of parentEvents) {
-        await mockDatabase.linkGuestEvent(guest.id, pe.event_id);
-      }
-    }
+    await adminDbWrite("saveGuest", { guest });
   },
   deleteGuest: async (id: string): Promise<void> => {
-    const { error } = await supabase.from("guests").delete().eq("id", id);
-    if (error) throw error;
+    await adminDbWrite("deleteGuest", { id });
   },
 
   getGroups: async (): Promise<Group[]> => {
@@ -294,11 +270,7 @@ export const mockDatabase = {
     return data || [];
   },
   saveGroup: async (group: Group): Promise<void> => {
-    const { error } = await supabase.from("groups").upsert({
-      id: group.id,
-      name: group.name
-    });
-    if (error) throw error;
+    await adminDbWrite("saveGroup", { group });
   },
 
   getGuestGroups: async (): Promise<GuestGroup[]> => {
@@ -307,34 +279,10 @@ export const mockDatabase = {
     return data || [];
   },
   addGuestToGroup: async (guest_id: string, group_id: string): Promise<void> => {
-    const { error } = await supabase.from("guest_groups").insert({ guest_id, group_id });
-    if (error) throw error;
-
-    // Auto-link all events matching this group to this guest
-    try {
-      const dbEvents = await mockDatabase.getEvents();
-      const groupEvents = dbEvents.filter(e => e.group_id === group_id);
-      for (const e of groupEvents) {
-        await mockDatabase.linkGuestEvent(guest_id, e.id);
-      }
-    } catch (e) {
-      console.error("Error auto-linking group events on add:", e);
-    }
+    await adminDbWrite("addGuestToGroup", { guest_id, group_id });
   },
   removeGuestFromGroup: async (guest_id: string, group_id: string): Promise<void> => {
-    const { error } = await supabase.from("guest_groups").delete().eq("guest_id", guest_id).eq("group_id", group_id);
-    if (error) throw error;
-
-    // Clean up corresponding guest_events link if not public
-    try {
-      const dbEvents = await mockDatabase.getEvents();
-      const groupEvents = dbEvents.filter(e => e.group_id === group_id);
-      for (const e of groupEvents) {
-        await mockDatabase.unlinkGuestEvent(guest_id, e.id);
-      }
-    } catch (e) {
-      console.error("Error unlinking group events on remove:", e);
-    }
+    await adminDbWrite("removeGuestFromGroup", { guest_id, group_id });
   },
 
   getEvents: async (): Promise<Event[]> => {
@@ -343,39 +291,10 @@ export const mockDatabase = {
     return data || [];
   },
   saveEvent: async (event: Event): Promise<void> => {
-    const { error } = await supabase.from("events").upsert({
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      date: event.date,
-      start_time: event.start_time,
-      end_time: event.end_time,
-      location: event.location,
-      dress_code: event.dress_code,
-      is_public: event.is_public,
-      group_id: event.group_id,
-      needs_rsvp: event.needs_rsvp !== false
-    });
-    if (error) throw error;
-
-    // Sync guest_events mapping
-    if (event.is_public) {
-      const guests = await mockDatabase.getGuests();
-      for (const g of guests) {
-        await mockDatabase.linkGuestEvent(g.id, event.id);
-      }
-    } else if (event.group_id) {
-      const guestsInGroup = (await mockDatabase.getGuestGroups())
-        .filter(gg => gg.group_id === event.group_id)
-        .map(gg => gg.guest_id);
-      for (const gId of guestsInGroup) {
-        await mockDatabase.linkGuestEvent(gId, event.id);
-      }
-    }
+    await adminDbWrite("saveEvent", { event });
   },
   deleteEvent: async (id: string): Promise<void> => {
-    const { error } = await supabase.from("events").delete().eq("id", id);
-    if (error) throw error;
+    await adminDbWrite("deleteEvent", { id });
   },
 
   getGuestEvents: async (): Promise<GuestEvent[]> => {
@@ -537,51 +456,12 @@ export const mockDatabase = {
   importBackupJSON: async (jsonStr: string): Promise<boolean> => {
     try {
       const parsed = JSON.parse(jsonStr);
-      if (parsed.parties && parsed.guests) {
-        await supabase.from("guest_events").delete().neq("event_id", "00000000-0000-0000-0000-000000000000");
-        await supabase.from("guest_groups").delete().neq("group_id", "00000000-0000-0000-0000-000000000000");
-        await supabase.from("events").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-        await supabase.from("groups").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-        await supabase.from("guests").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-        await supabase.from("parties").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-        if (parsed.site_configs) {
-          await supabase.from("site_configs").delete().neq("key", "00000000-0000-0000-0000-000000000000");
-        }
-
-        if (parsed.parties.length > 0) {
-          const { error } = await supabase.from("parties").insert(parsed.parties);
-          if (error) throw error;
-        }
-        if (parsed.guests.length > 0) {
-          const { error } = await supabase.from("guests").insert(parsed.guests);
-          if (error) throw error;
-        }
-        if (parsed.groups && parsed.groups.length > 0) {
-          const { error } = await supabase.from("groups").insert(parsed.groups);
-          if (error) throw error;
-        }
-        if (parsed.events && parsed.events.length > 0) {
-          const { error } = await supabase.from("events").insert(parsed.events);
-          if (error) throw error;
-        }
-        if (parsed.guest_groups && parsed.guest_groups.length > 0) {
-          const { error } = await supabase.from("guest_groups").insert(parsed.guest_groups);
-          if (error) throw error;
-        }
-        if (parsed.guest_events && parsed.guest_events.length > 0) {
-          const { error } = await supabase.from("guest_events").insert(parsed.guest_events);
-          if (error) throw error;
-        }
-        if (parsed.site_configs && parsed.site_configs.length > 0) {
-          const { error } = await supabase.from("site_configs").insert(parsed.site_configs);
-          if (error) throw error;
-        }
-        return true;
-      }
+      await adminDbWrite("importBackupJSON", { parsed });
+      return true;
     } catch (e) {
       console.error("Supabase bulk JSON import failed:", e);
+      return false;
     }
-    return false;
   },
 
   exportDatabaseJSON: async (): Promise<string> => {
@@ -647,39 +527,15 @@ export const mockDatabase = {
   },
 
   resetToSeeds: async (): Promise<void> => {
-    // 1. Clear database tables
-    await supabase.from("guest_events").delete().neq("event_id", "00000000-0000-0000-0000-000000000000");
-    await supabase.from("guest_groups").delete().neq("group_id", "00000000-0000-0000-0000-000000000000");
-    await supabase.from("events").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await supabase.from("groups").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await supabase.from("guests").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await supabase.from("parties").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // 2. Insert seed tables
-    if (DEFAULT_PARTIES.length > 0) {
-      const { error } = await supabase.from("parties").insert(DEFAULT_PARTIES);
-      if (error) throw error;
-    }
-    if (DEFAULT_GUESTS.length > 0) {
-      const { error } = await supabase.from("guests").insert(DEFAULT_GUESTS);
-      if (error) throw error;
-    }
-    if (DEFAULT_GROUPS.length > 0) {
-      const { error } = await supabase.from("groups").insert(DEFAULT_GROUPS);
-      if (error) throw error;
-    }
-    if (DEFAULT_EVENTS.length > 0) {
-      const { error } = await supabase.from("events").insert(DEFAULT_EVENTS);
-      if (error) throw error;
-    }
-    if (DEFAULT_GUEST_GROUPS.length > 0) {
-      const { error } = await supabase.from("guest_groups").insert(DEFAULT_GUEST_GROUPS);
-      if (error) throw error;
-    }
-    if (DEFAULT_GUEST_EVENTS.length > 0) {
-      const { error } = await supabase.from("guest_events").insert(DEFAULT_GUEST_EVENTS);
-      if (error) throw error;
-    }
+    const payload = {
+      parties: DEFAULT_PARTIES,
+      guests: DEFAULT_GUESTS,
+      groups: DEFAULT_GROUPS,
+      events: DEFAULT_EVENTS,
+      guest_groups: DEFAULT_GUEST_GROUPS,
+      guest_events: DEFAULT_GUEST_EVENTS
+    };
+    await adminDbWrite("resetToSeeds", payload);
 
     // 3. Sync local UI configurations to site_configs table in Supabase
     try {
