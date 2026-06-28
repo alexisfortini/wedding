@@ -176,10 +176,10 @@ export async function POST(req: Request) {
       if (error) throw error;
     } 
     else if (action === "addGuestToGroup") {
-      const { error } = await supabase.from("guest_groups").insert({
+      const { error } = await supabase.from("guest_groups").upsert({
         guest_id: payload.guest_id,
         group_id: payload.group_id
-      });
+      }, { onConflict: "guest_id,group_id" });
       if (error) throw error;
 
       // Auto-link all events matching this group to this guest
