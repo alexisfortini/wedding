@@ -2468,7 +2468,12 @@ export default function AdminPage() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-[11px] font-sans px-3 py-1 bg-olive/10 text-olive rounded-full border border-olive/10 font-medium">
-              Guests: {nonPlannerGuests.length} ({nonPlannerGuests.length + nonPlannerGuests.reduce((sum, g) => sum + (g.plus_ones_allowed || 0), 0)}) | Groups: {nonPlannerParties.length} | Events: {events.length}
+              Guests: {(() => {
+                const active = nonPlannerGuests.filter(g => g.rsvp_status !== "declined");
+                const min = active.length;
+                const max = min + active.reduce((sum, g) => sum + (g.plus_ones_allowed || 0), 0);
+                return min === max ? min : `${min}-${max}`;
+              })()} | Groups: {nonPlannerParties.length} | Events: {events.length}
             </span>
             <button 
               onClick={handleLogout}
@@ -2597,13 +2602,14 @@ export default function AdminPage() {
                   onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-white border border-sage/20 p-6 md:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-md rounded-sm"
+                  className="bg-white border border-sage/20 max-w-lg w-full max-h-[90vh] shadow-md rounded-sm flex flex-col overflow-hidden"
                 >
-                  <h3 className="text-2xl font-serif mb-6 text-charcoal">
+                  <h3 className="text-xl font-serif text-charcoal px-6 py-5 md:px-8 md:py-6 border-b border-sage/15">
                     {isEditingGuest ? "Edit Guest details" : "Add New Guest"}
                   </h3>
                   
-                  <form onSubmit={handleSaveGuest} className="space-y-5">
+                  <form onSubmit={handleSaveGuest} className="flex flex-col flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">First Name</label>
@@ -2809,8 +2815,9 @@ export default function AdminPage() {
                         className="w-full border border-sage/35 p-3 bg-cream/20 text-xs sm:text-sm outline-none focus:border-sage h-20 resize-none rounded-sm"
                       />
                     </div>
+                  </div>
 
-                    <div className="flex space-x-3 pt-4 border-t border-sage/15">
+                  <div className="bg-cream/25 p-4 md:px-8 md:py-5 border-t border-sage/15 flex space-x-3 z-10">
                       <button
                         type="button"
                         disabled={isSavingGuest}

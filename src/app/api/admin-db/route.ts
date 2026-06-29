@@ -64,14 +64,16 @@ export async function POST(req: Request) {
         const { data: dbEvents } = await supabase.from("events").select("id,is_public");
         if (dbEvents) {
           const publicEvents = dbEvents.filter(e => e.is_public);
-          for (const e of publicEvents) {
-            await supabase.from("guest_events").upsert({
-              guest_id: payload.guest.id,
-              event_id: e.id,
-              is_attending: null,
-              meal_choice: null,
-              dietary_restrictions: null
-            }, { onConflict: "guest_id,event_id" });
+          const publicRows = publicEvents.map(e => ({
+            guest_id: payload.guest.id,
+            event_id: e.id,
+            is_attending: null,
+            meal_choice: null,
+            dietary_restrictions: null
+          }));
+          if (publicRows.length > 0) {
+            const { error: err } = await supabase.from("guest_events").upsert(publicRows, { onConflict: "guest_id,event_id" });
+            if (err) throw err;
           }
         }
       } catch (e) {
@@ -85,16 +87,16 @@ export async function POST(req: Request) {
             .from("guest_events")
             .select("event_id")
             .eq("guest_id", payload.guest.parent_guest_id);
-          if (parentEvents) {
-            for (const pe of parentEvents) {
-              await supabase.from("guest_events").upsert({
-                guest_id: payload.guest.id,
-                event_id: pe.event_id,
-                is_attending: null,
-                meal_choice: null,
-                dietary_restrictions: null
-              }, { onConflict: "guest_id,event_id" });
-            }
+          if (parentEvents && parentEvents.length > 0) {
+            const parentRows = parentEvents.map(pe => ({
+              guest_id: payload.guest.id,
+              event_id: pe.event_id,
+              is_attending: null,
+              meal_choice: null,
+              dietary_restrictions: null
+            }));
+            const { error: err } = await supabase.from("guest_events").upsert(parentRows, { onConflict: "guest_id,event_id" });
+            if (err) throw err;
           }
         } catch (e) {
           console.error("Error auto-linking +1 parent events on save API:", e);
@@ -136,32 +138,32 @@ export async function POST(req: Request) {
       try {
         if (payload.event.is_public) {
           const { data: guests } = await supabase.from("guests").select("id");
-          if (guests) {
-            for (const g of guests) {
-              await supabase.from("guest_events").upsert({
-                guest_id: g.id,
-                event_id: payload.event.id,
-                is_attending: null,
-                meal_choice: null,
-                dietary_restrictions: null
-              }, { onConflict: "guest_id,event_id" });
-            }
+          if (guests && guests.length > 0) {
+            const rows = guests.map(g => ({
+              guest_id: g.id,
+              event_id: payload.event.id,
+              is_attending: null,
+              meal_choice: null,
+              dietary_restrictions: null
+            }));
+            const { error: err } = await supabase.from("guest_events").upsert(rows, { onConflict: "guest_id,event_id" });
+            if (err) throw err;
           }
         } else if (payload.event.group_id) {
           const { data: guestsInGroup } = await supabase
             .from("guest_groups")
             .select("guest_id")
             .eq("group_id", payload.event.group_id);
-          if (guestsInGroup) {
-            for (const gg of guestsInGroup) {
-              await supabase.from("guest_events").upsert({
-                guest_id: gg.guest_id,
-                event_id: payload.event.id,
-                is_attending: null,
-                meal_choice: null,
-                dietary_restrictions: null
-              }, { onConflict: "guest_id,event_id" });
-            }
+          if (guestsInGroup && guestsInGroup.length > 0) {
+            const rows = guestsInGroup.map(gg => ({
+              guest_id: gg.guest_id,
+              event_id: payload.event.id,
+              is_attending: null,
+              meal_choice: null,
+              dietary_restrictions: null
+            }));
+            const { error: err } = await supabase.from("guest_events").upsert(rows, { onConflict: "guest_id,event_id" });
+            if (err) throw err;
           }
         }
       } catch (e) {
@@ -190,14 +192,16 @@ export async function POST(req: Request) {
         
         if (dbEvents) {
           const groupEvents = dbEvents.filter(e => e.group_id === payload.group_id);
-          for (const e of groupEvents) {
-            await supabase.from("guest_events").upsert({
-              guest_id: payload.guest_id,
-              event_id: e.id,
-              is_attending: null,
-              meal_choice: null,
-              dietary_restrictions: null
-            }, { onConflict: "guest_id,event_id" });
+          const rows = groupEvents.map(e => ({
+            guest_id: payload.guest_id,
+            event_id: e.id,
+            is_attending: null,
+            meal_choice: null,
+            dietary_restrictions: null
+          }));
+          if (rows.length > 0) {
+            const { error: err } = await supabase.from("guest_events").upsert(rows, { onConflict: "guest_id,event_id" });
+            if (err) throw err;
           }
         }
       } catch (e) {
