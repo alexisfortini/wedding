@@ -44,7 +44,16 @@ export async function GET(request: Request) {
     ]);
 
     const mealsConfigRow = (siteConfigs || []).find((c: any) => c.key === "meals");
-    const mealsConfig = mealsConfigRow ? JSON.parse(mealsConfigRow.value) : undefined;
+    let mealsConfig = undefined;
+    if (mealsConfigRow && mealsConfigRow.value) {
+      try {
+        mealsConfig = typeof mealsConfigRow.value === "string" 
+          ? JSON.parse(mealsConfigRow.value) 
+          : mealsConfigRow.value;
+      } catch (e) {
+        console.error("Error parsing meals config:", e);
+      }
+    }
 
     // Filter out planners from export if desired or keep all
     const formattedRows = exportToAislePlanner(
