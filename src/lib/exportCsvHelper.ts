@@ -10,10 +10,10 @@ export async function generateAislePlannerCSVResponse(layoutMode: "group" | "ind
     const { searchParams } = new URL(request.url);
     const key = searchParams.get("key");
 
-    // Optional security key check
-    const expectedKey = process.env.EXPORT_SECRET_KEY || "wedding2026";
-    if (key && key !== expectedKey) {
-      return NextResponse.json({ error: "Unauthorized invalid key" }, { status: 401 });
+    // Strict security key check
+    const expectedKey = process.env.EXPORT_SECRET_KEY || "ap_sec_63b2120c11dccdc10159ae284379b01d";
+    if (!key || key !== expectedKey) {
+      return NextResponse.json({ error: "Unauthorized access: valid secret API key required" }, { status: 401 });
     }
 
     if (!supabaseUrl || !supabaseKey) {
