@@ -36,6 +36,8 @@ export async function POST(req: Request) {
       if (error) throw error;
     } 
     else if (action === "deleteParty") {
+      // Unlink guests from this party first so cascade delete does not remove individuals
+      await supabase.from("guests").update({ party_id: null }).eq("party_id", payload.id);
       const { error } = await supabase.from("parties").delete().eq("id", payload.id);
       if (error) throw error;
     } 
