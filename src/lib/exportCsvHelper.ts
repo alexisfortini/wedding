@@ -10,9 +10,9 @@ export async function generateAislePlannerCSVResponse(layoutMode: "group" | "ind
     const { searchParams } = new URL(request.url);
     const key = searchParams.get("key");
 
-    // Strict security key check
-    const expectedKey = process.env.EXPORT_SECRET_KEY || "ap_sec_63b2120c11dccdc10159ae284379b01d";
-    if (!key || key !== expectedKey) {
+    // Strict security key check from environment variable
+    const expectedKey = process.env.EXPORT_SECRET_KEY;
+    if (!expectedKey || !key || key !== expectedKey) {
       return NextResponse.json({ error: "Unauthorized access: valid secret API key required" }, { status: 401 });
     }
 
