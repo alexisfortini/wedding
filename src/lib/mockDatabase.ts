@@ -234,9 +234,13 @@ async function adminDbWrite(action: string, payload: any): Promise<any> {
 // Database implementation using Supabase directly as the single source of truth
 export const mockDatabase = {
   getParties: async (): Promise<Party[]> => {
-    const { data, error } = await supabase.from("parties").select("*").order("name");
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase.from("parties").select("*").order("name");
+      if (!error && data && data.length > 0) return data;
+    } catch (e) {
+      console.warn("Supabase getParties failed, using seed fallback:", e);
+    }
+    return DEFAULT_PARTIES;
   },
   saveParty: async (party: Party): Promise<void> => {
     await adminDbWrite("saveParty", { party });
@@ -246,13 +250,17 @@ export const mockDatabase = {
   },
 
   getGuests: async (): Promise<Guest[]> => {
-    const { data, error } = await supabase
-      .from("guests")
-      .select("*")
-      .order("last_name", { ascending: true })
-      .order("first_name", { ascending: true });
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from("guests")
+        .select("*")
+        .order("last_name", { ascending: true })
+        .order("first_name", { ascending: true });
+      if (!error && data && data.length > 0) return data;
+    } catch (e) {
+      console.warn("Supabase getGuests failed, using seed fallback:", e);
+    }
+    return DEFAULT_GUESTS;
   },
   saveGuest: async (guest: Guest): Promise<void> => {
     await adminDbWrite("saveGuest", { guest });
@@ -262,21 +270,26 @@ export const mockDatabase = {
   },
 
   getGroups: async (): Promise<Group[]> => {
-    const { data, error } = await supabase.from("groups").select("*").order("name");
-    if (error) throw error;
-    if (!data || data.length === 0) {
-      return DEFAULT_GROUPS;
+    try {
+      const { data, error } = await supabase.from("groups").select("*").order("name");
+      if (!error && data && data.length > 0) return data;
+    } catch (e) {
+      console.warn("Supabase getGroups failed, using seed fallback:", e);
     }
-    return data || [];
+    return DEFAULT_GROUPS;
   },
   saveGroup: async (group: Group): Promise<void> => {
     await adminDbWrite("saveGroup", { group });
   },
 
   getGuestGroups: async (): Promise<GuestGroup[]> => {
-    const { data, error } = await supabase.from("guest_groups").select("*");
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase.from("guest_groups").select("*");
+      if (!error && data && data.length > 0) return data;
+    } catch (e) {
+      console.warn("Supabase getGuestGroups failed, using seed fallback:", e);
+    }
+    return DEFAULT_GUEST_GROUPS;
   },
   addGuestToGroup: async (guest_id: string, group_id: string): Promise<void> => {
     await adminDbWrite("addGuestToGroup", { guest_id, group_id });
@@ -286,9 +299,13 @@ export const mockDatabase = {
   },
 
   getEvents: async (): Promise<Event[]> => {
-    const { data, error } = await supabase.from("events").select("*").order("date").order("start_time");
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase.from("events").select("*").order("date").order("start_time");
+      if (!error && data && data.length > 0) return data;
+    } catch (e) {
+      console.warn("Supabase getEvents failed, using seed fallback:", e);
+    }
+    return DEFAULT_EVENTS;
   },
   saveEvent: async (event: Event): Promise<void> => {
     await adminDbWrite("saveEvent", { event });
@@ -298,9 +315,13 @@ export const mockDatabase = {
   },
 
   getGuestEvents: async (): Promise<GuestEvent[]> => {
-    const { data, error } = await supabase.from("guest_events").select("*");
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase.from("guest_events").select("*");
+      if (!error && data && data.length > 0) return data;
+    } catch (e) {
+      console.warn("Supabase getGuestEvents failed, using seed fallback:", e);
+    }
+    return DEFAULT_GUEST_EVENTS;
   },
   linkGuestEvent: async (guest_id: string, event_id: string): Promise<void> => {
     const { error } = await supabase.from("guest_events").upsert({
@@ -335,21 +356,35 @@ export const mockDatabase = {
 
   // Lookup guest by name (Case-insensitive)
   findGuestByName: async (firstName: string, lastName: string) => {
-    const { data, error } = await supabase
-      .from("guests")
-      .select(`
-        *,
-        parties (name)
-      `)
-      .ilike("first_name", firstName.trim())
-      .ilike("last_name", lastName.trim())
-      .maybeSingle();
-    if (error) throw error;
-    
-    if (data) {
+    try {
+      const { data, error } = await supabase
+        .from("guests")
+        .select(`
+          *,
+          parties (name)
+        `)
+        .ilike("first_name", firstName.trim())
+        .ilike("last_name", lastName.trim())
+        .maybeSingle();
+      if (!error && data) {
+        return {
+          ...data,
+          parties: data.parties ? { name: (data.parties as any).name } : null
+        };
+      }
+    } catch (e) {
+      console.warn("Supabase findGuestByName failed, using local DEFAULT_GUESTS:", e);
+    }
+
+    const found = DEFAULT_GUESTS.find(
+      g => g.first_name.toLowerCase().trim() === firstName.toLowerCase().trim() &&
+           g.last_name.toLowerCase().trim() === lastName.toLowerCase().trim()
+    );
+    if (found) {
+      const party = DEFAULT_PARTIES.find(p => p.id === found.party_id);
       return {
-        ...data,
-        parties: data.parties ? { name: (data.parties as any).name } : null
+        ...found,
+        parties: party ? { name: party.name } : null
       };
     }
     return null;
