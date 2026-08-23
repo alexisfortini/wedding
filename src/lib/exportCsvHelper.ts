@@ -2,16 +2,39 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { exportToAislePlanner, convertToAislePlannerCSV } from "@/lib/aislePlannerExporter";
 
-import { 
-  DEFAULT_GUESTS, 
-  DEFAULT_PARTIES, 
-  DEFAULT_GROUPS, 
-  DEFAULT_EVENTS, 
-  DEFAULT_GUEST_GROUPS 
-} from "@/lib/mockDatabase";
+import guestsSeed from "@config/db/guests.json";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+function parseGuestsSeed(seed: any[]) {
+  const parsedGuests: any[] = [];
+  const parsedParties: any[] = [];
+  (seed || []).forEach((partyInfo: any, pIdx: number) => {
+    const partyId = `party-${pIdx}-${partyInfo.party_name}`;
+    parsedParties.push({ id: partyId, name: partyInfo.party_name });
+    (partyInfo.guests || []).forEach((g: any, gIdx: number) => {
+      parsedGuests.push({
+        id: `guest-${pIdx}-${gIdx}-${g.first_name}-${g.last_name}`,
+        first_name: g.first_name,
+        last_name: g.last_name,
+        email: g.email || null,
+        phone: g.phone || null,
+        party_id: partyId,
+        address: g.address || partyInfo.address || null,
+        rsvp_status: g.rsvp_status || "pending",
+        notes: g.notes || "",
+        is_plus_one: g.is_plus_one || false,
+        parent_guest_id: g.parent_guest_id || null,
+        plus_ones_allowed: g.plus_ones_allowed || 0,
+        age: g.age || "Adult",
+        needs_highchair: g.needs_highchair || false,
+        in_wheelchair: g.in_wheelchair || false
+      });
+    });
+  });
+  return { parsedGuests, parsedParties };
+}
 
 export async function generateAislePlannerCSVResponse(layoutMode: "group" | "individual", request: Request) {
   try {
@@ -77,11 +100,9 @@ export async function generateAislePlannerCSVResponse(layoutMode: "group" | "ind
 
     // Fallback to local JSON seeds if Supabase returned empty or was unavailable
     if (!Array.isArray(guestsList) || guestsList.length === 0) {
-      guestsList = DEFAULT_GUESTS;
-      partiesList = DEFAULT_PARTIES;
-      groupsList = DEFAULT_GROUPS;
-      guestGroupsList = DEFAULT_GUEST_GROUPS;
-      eventsList = DEFAULT_EVENTS;
+      const { parsedGuests, parsedParties } = parseGuestsSeed(guestsSeed);
+      guestsList = parsedGuests;
+      partiesList = parsedParties;
     }
 
     const apLayout = layoutMode === "group" ? "grouped" : "individual";
