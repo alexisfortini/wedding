@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { exportToAislePlanner, convertToAislePlannerCSV } from "@/lib/aislePlannerExporter";
 
+import { 
+  DEFAULT_GUESTS, 
+  DEFAULT_PARTIES, 
+  DEFAULT_GROUPS, 
+  DEFAULT_EVENTS, 
+  DEFAULT_GUEST_GROUPS 
+} from "@/lib/mockDatabase";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
@@ -16,52 +24,75 @@ export async function generateAislePlannerCSVResponse(layoutMode: "group" | "ind
       return NextResponse.json({ error: "Unauthorized access: valid secret API key required" }, { status: 401 });
     }
 
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({ error: "Database environment variables missing" }, { status: 500 });
+    let guestsList = [];
+    let partiesList = [];
+    let groupsList = [];
+    let guestGroupsList = [];
+    let guestEventsList = [];
+    let eventsList = [];
+    let mealsConfig = undefined;
+
+    if (supabaseUrl && supabaseKey) {
+      try {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const [
+          { data: guests },
+          { data: parties },
+          { data: groups },
+          { data: guestGroups },
+          { data: guestEvents },
+          { data: events },
+          { data: siteConfigs }
+        ] = await Promise.all([
+          supabase.from("guests").select("*"),
+          supabase.from("parties").select("*"),
+          supabase.from("groups").select("*"),
+          supabase.from("guest_groups").select("*"),
+          supabase.from("guest_events").select("*"),
+          supabase.from("events").select("*"),
+          supabase.from("site_configs").select("*")
+        ]);
+
+        guestsList = guests || [];
+        partiesList = parties || [];
+        groupsList = groups || [];
+        guestGroupsList = guestGroups || [];
+        guestEventsList = guestEvents || [];
+        eventsList = events || [];
+
+        const mealsConfigRow = (siteConfigs || []).find((c: any) => c.key === "meals");
+        if (mealsConfigRow && mealsConfigRow.value) {
+          try {
+            mealsConfig = typeof mealsConfigRow.value === "string" 
+              ? JSON.parse(mealsConfigRow.value) 
+              : mealsConfigRow.value;
+          } catch (e) {
+            console.error("Error parsing meals config:", e);
+          }
+        }
+      } catch (err) {
+        console.error("Supabase fetch failed, falling back to local JSON seeds:", err);
+      }
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Fetch all tables concurrently
-    const [
-      { data: guests },
-      { data: parties },
-      { data: groups },
-      { data: guestGroups },
-      { data: guestEvents },
-      { data: events },
-      { data: siteConfigs }
-    ] = await Promise.all([
-      supabase.from("guests").select("*"),
-      supabase.from("parties").select("*"),
-      supabase.from("groups").select("*"),
-      supabase.from("guest_groups").select("*"),
-      supabase.from("guest_events").select("*"),
-      supabase.from("events").select("*"),
-      supabase.from("site_configs").select("*")
-    ]);
-
-    const mealsConfigRow = (siteConfigs || []).find((c: any) => c.key === "meals");
-    let mealsConfig = undefined;
-    if (mealsConfigRow && mealsConfigRow.value) {
-      try {
-        mealsConfig = typeof mealsConfigRow.value === "string" 
-          ? JSON.parse(mealsConfigRow.value) 
-          : mealsConfigRow.value;
-      } catch (e) {
-        console.error("Error parsing meals config:", e);
-      }
+    // Fallback to local JSON seeds if Supabase returned empty or was unavailable
+    if (guestsList.length === 0) {
+      guestsList = DEFAULT_GUESTS;
+      partiesList = DEFAULT_PARTIES;
+      groupsList = DEFAULT_GROUPS;
+      guestGroupsList = DEFAULT_GUEST_GROUPS;
+      eventsList = DEFAULT_EVENTS;
     }
 
     const apLayout = layoutMode === "group" ? "grouped" : "individual";
 
     const formattedRows = exportToAislePlanner(
-      guests || [],
-      parties || [],
-      groups || [],
-      guestGroups || [],
-      guestEvents || [],
-      events || [],
+      guestsList,
+      partiesList,
+      groupsList,
+      guestGroupsList,
+      guestEventsList,
+      eventsList,
       apLayout,
       mealsConfig
     );
