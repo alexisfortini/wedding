@@ -76,7 +76,7 @@ export async function generateAislePlannerCSVResponse(layoutMode: "group" | "ind
     }
 
     // Fallback to local JSON seeds if Supabase returned empty or was unavailable
-    if (guestsList.length === 0) {
+    if (!Array.isArray(guestsList) || guestsList.length === 0) {
       guestsList = DEFAULT_GUESTS;
       partiesList = DEFAULT_PARTIES;
       groupsList = DEFAULT_GROUPS;

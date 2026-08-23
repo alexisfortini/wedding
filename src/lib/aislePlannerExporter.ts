@@ -30,15 +30,21 @@ export interface AislePlannerRow {
  * Supports individual (flat list) or grouped (empty row separator between parties) styles.
  */
 export function exportToAislePlanner(
-  guests: Guest[],
-  parties: Party[],
-  groups: Group[],
-  guestGroups: GuestGroup[],
-  guestEvents: GuestEvent[],
-  events: Event[],
+  rawGuests: Guest[] = [],
+  rawParties: Party[] = [],
+  rawGroups: Group[] = [],
+  rawGuestGroups: GuestGroup[] = [],
+  rawGuestEvents: GuestEvent[] = [],
+  rawEvents: Event[] = [],
   layout: "individual" | "grouped" = "individual",
   mealsConfig?: any
 ): (AislePlannerRow | null)[] {
+  const guests = Array.isArray(rawGuests) ? rawGuests : [];
+  const parties = Array.isArray(rawParties) ? rawParties : [];
+  const groups = Array.isArray(rawGroups) ? rawGroups : [];
+  const guestGroups = Array.isArray(rawGuestGroups) ? rawGuestGroups : [];
+  const guestEvents = Array.isArray(rawGuestEvents) ? rawGuestEvents : [];
+  const events = Array.isArray(rawEvents) ? rawEvents : [];
   // Helper function to map a single guest to an Aisle Planner row
   const mapGuest = (g: Guest): AislePlannerRow => {
     // 1. Calculate RSVP ID
