@@ -25,6 +25,25 @@ export default function Home() {
     mockDatabase.getSiteConfig("admin", adminConfigDefault).then(setConfig);
   }, []);
 
+  // Ensure browser always lands at the top of the homepage on login / session grant
+  useEffect(() => {
+    if (guest) {
+      const resetScroll = () => {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+        if (window.location.hash) {
+          history.replaceState(null, "", window.location.pathname);
+        }
+      };
+
+      resetScroll();
+      // Secondary check after mobile reflow
+      const timer = setTimeout(resetScroll, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [guest]);
+
   if (!guest) {
     return <GuestGate onAccessGranted={setGuest} />;
   }

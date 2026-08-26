@@ -21,6 +21,16 @@ export default function GuestGate({ onAccessGranted }: GuestGateProps) {
     mockDatabase.getSiteConfig("general", generalConfigDefault).then(setConfig);
   }, []);
 
+  const grantAccess = (guestData: any) => {
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+    if (window.location.hash) {
+      history.replaceState(null, "", window.location.pathname);
+    }
+    onAccessGranted(guestData);
+  };
+
   // Check if guest is already in session (LocalStorage for now, can move to cookie/middleware later)
   useEffect(() => {
     const savedGuestStr = localStorage.getItem("wedding_guest");
@@ -28,7 +38,7 @@ export default function GuestGate({ onAccessGranted }: GuestGateProps) {
       try {
         const savedGuest = JSON.parse(savedGuestStr);
         // Instantly grant access using cached data to avoid flash/delay
-        onAccessGranted(savedGuest);
+        grantAccess(savedGuest);
 
         if (savedGuest && savedGuest.id && savedGuest.id !== "mock-guest-id") {
           // Re-fetch in the background to update with freshest details (like updated party_id)
@@ -45,7 +55,7 @@ export default function GuestGate({ onAccessGranted }: GuestGateProps) {
             .then(({ data, error }) => {
               if (!error && data) {
                 localStorage.setItem("wedding_guest", JSON.stringify(data));
-                onAccessGranted(data);
+                grantAccess(data);
               }
             });
         }
@@ -81,7 +91,7 @@ export default function GuestGate({ onAccessGranted }: GuestGateProps) {
       }
 
       localStorage.setItem("wedding_guest", JSON.stringify(data));
-      onAccessGranted(data);
+      grantAccess(data);
     } catch (err) {
       console.warn("Supabase lookup failed or bypassed. Querying local mockDatabase:", err);
       
@@ -89,7 +99,7 @@ export default function GuestGate({ onAccessGranted }: GuestGateProps) {
         const localGuest = await mockDatabase.findGuestByName(firstName, lastName);
         if (localGuest) {
           localStorage.setItem("wedding_guest", JSON.stringify(localGuest));
-          onAccessGranted(localGuest);
+          grantAccess(localGuest);
         } else {
           // Create new guest in mockDatabase if not found, to allow seamless test logins
           const newGuestId = typeof crypto !== "undefined" && crypto.randomUUID 
@@ -119,7 +129,7 @@ export default function GuestGate({ onAccessGranted }: GuestGateProps) {
             parties: null
           };
           localStorage.setItem("wedding_guest", JSON.stringify(saved));
-          onAccessGranted(saved);
+          grantAccess(saved);
         }
       } catch (innerErr) {
         console.error("Database access failed:", innerErr);

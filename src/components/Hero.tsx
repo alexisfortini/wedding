@@ -62,14 +62,28 @@ export default function HeroSection() {
                     <div className="w-12 h-[1px] bg-cream/35"></div>
                 </div>
 
-                <motion.a
-                    href="#rsvp"
+                <motion.button
+                    onClick={(e) => {
+                        e.preventDefault();
+                        const element = document.getElementById("rsvp");
+                        if (element) {
+                            const offset = 80;
+                            const bodyRect = document.body.getBoundingClientRect().top;
+                            const elementRect = element.getBoundingClientRect().top;
+                            const elementPosition = elementRect - bodyRect;
+                            const offsetPosition = elementPosition - offset;
+                            window.scrollTo({
+                                top: offsetPosition,
+                                behavior: "smooth"
+                            });
+                        }
+                    }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="inline-block px-10 py-4 border border-cream/35 text-cream uppercase tracking-[0.2em] text-xs font-sans hover:bg-terracotta hover:text-cream hover:border-terracotta transition-all duration-500 rounded-sm font-semibold shadow-sm"
+                    className="inline-block px-10 py-4 border border-cream/35 text-cream uppercase tracking-[0.2em] text-xs font-sans hover:bg-terracotta hover:text-cream hover:border-terracotta transition-all duration-500 rounded-sm font-semibold shadow-sm cursor-pointer"
                 >
                     {config.rsvp_prompt}
-                </motion.a>
+                </motion.button>
             </motion.div>
         </section>
     );
