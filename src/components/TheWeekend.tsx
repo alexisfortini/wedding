@@ -8,6 +8,7 @@ import { mockDatabase } from "@/lib/mockDatabase";
 import { getResponsiveImageStyle } from "@/lib/imageHelper";
 import weekendConfigDefault from "@config/ui/weekend.json";
 import imagesConfigDefault from "@config/ui/images.json";
+import adminConfigDefault from "@config/ui/admin.json";
 
 const SoupIcon = ({ className }: { className?: string }) => (
   <svg
@@ -178,9 +179,12 @@ export default function TheWeekend({ guest }: { guest: any }) {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        if (!guest || guest.id === "mock-guest-id") {
-          throw new Error("Using mock guest");
-        }
+        if (!guest) throw new Error("No guest specified");
+
+        const isAdmin = adminConfigDefault.admins.some(
+          (a: any) => a.first.toLowerCase().trim() === guest.first_name?.toLowerCase().trim() &&
+                      a.last.toLowerCase().trim() === guest.last_name?.toLowerCase().trim()
+        );
 
         // 1. Fetch public events
         const { data: publicEvents, error: pubErr } = await supabase
@@ -189,6 +193,22 @@ export default function TheWeekend({ guest }: { guest: any }) {
           .eq("is_public", true);
 
         if (pubErr) throw pubErr;
+
+        // If admin (Groom/Bride/Host), fetch all events
+        if (isAdmin) {
+          const { data: allEvents, error: allErr } = await supabase
+            .from("events")
+            .select("*");
+          if (!allErr && allEvents && allEvents.length > 0) {
+            const sorted = allEvents.sort((a, b) => {
+              if (!a.date || !a.start_time) return 1;
+              if (!b.date || !b.start_time) return -1;
+              return new Date(`${a.date}T${a.start_time}`).getTime() - new Date(`${b.date}T${b.start_time}`).getTime();
+            });
+            setEvents(sorted);
+            return;
+          }
+        }
 
         // 2. Fetch guest's groups
         const { data: groupsData, error: grpErr } = await supabase
@@ -227,16 +247,27 @@ export default function TheWeekend({ guest }: { guest: any }) {
         // Fallback to local mockDatabase
         try {
           const localEvents = await mockDatabase.getEvents();
+          const localGuests = await mockDatabase.getGuests();
           
-          // Find groups this guest belongs to
-          const guestId = guest?.id || "a1b2c3d4-5678-90ab-cdef-0123456789ab"; // default to Alexis if mock-guest-id
+          // Find matching guest in local DB
+          const matchedGuest = localGuests.find(
+            g => g.first_name.toLowerCase().trim() === guest?.first_name?.toLowerCase().trim() &&
+                 g.last_name.toLowerCase().trim() === guest?.last_name?.toLowerCase().trim()
+          ) || guest;
+
+          const targetGuestId = matchedGuest?.id || guest?.id;
           const localGG = await mockDatabase.getGuestGroups();
           const myGuestGroups = localGG
-            .filter(gg => gg.guest_id === guestId)
+            .filter(gg => gg.guest_id === targetGuestId)
             .map(gg => gg.group_id);
 
+          const isAdmin = adminConfigDefault.admins.some(
+            (a: any) => a.first.toLowerCase().trim() === guest?.first_name?.toLowerCase().trim() &&
+                        a.last.toLowerCase().trim() === guest?.last_name?.toLowerCase().trim()
+          );
+
           const visibleEvents = localEvents.filter(e => 
-            e.is_public || (e.group_id && myGuestGroups.includes(e.group_id))
+            e.is_public || isAdmin || (e.group_id && myGuestGroups.includes(e.group_id))
           );
 
           // Sort by date/time
@@ -248,7 +279,7 @@ export default function TheWeekend({ guest }: { guest: any }) {
 
           setEvents(sorted);
         } catch (innerErr) {
-          console.error("Failed to load events from backup database:", innerErr);
+          console.error("Failed to fetch events from mockDatabase:", innerErr);
         }
       } finally {
         setLoading(false);
