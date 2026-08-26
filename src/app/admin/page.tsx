@@ -391,23 +391,84 @@ export default function AdminPage() {
   };
 
   // Registry helpers
-  const updateRegistryFundItem = (idx: number, key: string, val: any) => {
-    setTempConfigData((prev: any) => {
-      const funds = [...prev.funds];
-      funds[idx] = { ...funds[idx], [key]: val };
-      return { ...prev, funds };
-    });
-  };
-  const addRegistryFundItem = () => {
+  const updateCashFundField = (key: string, val: any) => {
     setTempConfigData((prev: any) => ({
       ...prev,
-      funds: [...prev.funds, { title: "", description: "", button_text: "Send a Gift", icon: "Heart", url: "" }]
+      cash_fund: {
+        ...(prev.cash_fund || prev.honeymoon_fund || {}),
+        [key]: val
+      }
     }));
   };
-  const deleteRegistryFundItem = (idx: number) => {
+
+  const updateRegistryMainCard = (card: "cash_fund" | "honeymoon" | "store", key: string, val: any) => {
     setTempConfigData((prev: any) => ({
       ...prev,
-      funds: prev.funds.filter((_: any, i: number) => i !== idx)
+      main_cards: {
+        ...(prev.main_cards || {}),
+        [card]: {
+          ...(prev.main_cards?.[card] || {}),
+          [key]: val
+        }
+      }
+    }));
+  };
+
+  const updateRegistryItem = (idx: number, key: string, val: any) => {
+    setTempConfigData((prev: any) => {
+      const items = [...(prev.items || [])];
+      items[idx] = { ...items[idx], [key]: val };
+      return { ...prev, items };
+    });
+  };
+  const addRegistryItem = () => {
+    setTempConfigData((prev: any) => ({
+      ...prev,
+      items: [
+        ...(prev.items || []),
+        {
+          id: `item-${Date.now()}`,
+          title: "",
+          store_name: "",
+          store_url: "",
+          item_url: "",
+          price: "",
+          image_url: "",
+          category: "Kitchen",
+          description: "",
+          is_purchased: false,
+          enabled: true
+        }
+      ]
+    }));
+  };
+  const deleteRegistryItem = (idx: number) => {
+    setTempConfigData((prev: any) => ({
+      ...prev,
+      items: (prev.items || []).filter((_: any, i: number) => i !== idx)
+    }));
+  };
+
+  const updateRegistryStore = (idx: number, key: string, val: any) => {
+    setTempConfigData((prev: any) => {
+      const stores = [...(prev.stores || [])];
+      stores[idx] = { ...stores[idx], [key]: val };
+      return { ...prev, stores };
+    });
+  };
+  const addRegistryStore = () => {
+    setTempConfigData((prev: any) => ({
+      ...prev,
+      stores: [
+        ...(prev.stores || []),
+        { id: `store-${Date.now()}`, name: "", description: "", url: "", badge: "", enabled: true }
+      ]
+    }));
+  };
+  const deleteRegistryStore = (idx: number) => {
+    setTempConfigData((prev: any) => ({
+      ...prev,
+      stores: (prev.stores || []).filter((_: any, i: number) => i !== idx)
     }));
   };
 
@@ -1635,106 +1696,496 @@ export default function AdminPage() {
   };
 
   const renderRegistrySection = () => {
+    const cashFund = tempConfigData.cash_fund || tempConfigData.honeymoon_fund || {};
+    const mainCards = tempConfigData.main_cards || {};
+    const items = tempConfigData.items || [];
+    const stores = tempConfigData.stores || [];
+
+    const fundCard = mainCards.cash_fund || mainCards.honeymoon || {};
+    const storeCard = mainCards.store || {};
+
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">Section Title</label>
-            <input
-              type="text"
-              value={tempConfigData.title || ""}
-              onChange={e => updateField("title", e.target.value)}
-              className="w-full border border-sage/35 p-2 bg-cream/20 text-sm outline-none focus:border-sage rounded-sm"
-            />
+      <div className="space-y-8">
+        {/* General Section Settings */}
+        <div className="bg-cream/15 border border-sage/15 p-5 rounded-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-sage/15 pb-2">
+            <h3 className="text-sm font-serif font-semibold text-charcoal uppercase tracking-wider">1. Main Registry Header & Visibility</h3>
+            <label className="flex items-center gap-2 text-xs font-sans text-amber-900 bg-amber-50 border border-amber-300 px-3.5 py-1.5 rounded cursor-pointer font-semibold shadow-2xs">
+              <input
+                type="checkbox"
+                checked={Boolean(tempConfigData.hide_registry)}
+                onChange={e => updateField("hide_registry", e.target.checked)}
+                className="rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+              />
+              <span>Hide Registry (Shows "Coming Soon" card)</span>
+            </label>
           </div>
+
+          {tempConfigData.hide_registry && (
+            <div className="bg-amber-50/70 border border-amber-200 p-4 rounded-sm space-y-3">
+              <span className="text-[10px] uppercase tracking-wider text-amber-900 font-semibold block">Coming Soon Card Settings (Displayed on website)</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[9px] uppercase tracking-widest text-charcoal/50 mb-1 font-semibold">Coming Soon Card Title</label>
+                  <input
+                    type="text"
+                    value={tempConfigData.coming_soon_title || "Registry Coming Soon"}
+                    onChange={e => updateField("coming_soon_title", e.target.value)}
+                    className="w-full border border-sage/35 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
+                    placeholder="Registry Coming Soon"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] uppercase tracking-widest text-charcoal/50 mb-1 font-semibold">Coming Soon Message</label>
+                  <input
+                    type="text"
+                    value={tempConfigData.coming_soon_message || "We are currently finalizing our registry. Please check back soon!"}
+                    onChange={e => updateField("coming_soon_message", e.target.value)}
+                    className="w-full border border-sage/35 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
+                    placeholder="We are currently finalizing our registry..."
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">Section Title</label>
+              <input
+                type="text"
+                value={tempConfigData.title || ""}
+                onChange={e => updateField("title", e.target.value)}
+                className="w-full border border-sage/35 p-2 bg-white text-sm outline-none focus:border-sage rounded-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">Section Subtitle / Intro Description</label>
+              <input
+                type="text"
+                value={tempConfigData.description || ""}
+                onChange={e => updateField("description", e.target.value)}
+                className="w-full border border-sage/35 p-2 bg-white text-sm outline-none focus:border-sage rounded-sm"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div className="bg-white border border-sage/20 p-3 rounded-sm space-y-2">
+              <label className="block text-[9px] uppercase tracking-widest text-terracotta font-semibold">Homepage Card 1: Cash / Custom Fund Card</label>
+              <input
+                type="text"
+                value={fundCard.title || ""}
+                onChange={e => updateRegistryMainCard("cash_fund", "title", e.target.value)}
+                className="w-full border border-sage/25 p-1.5 text-xs outline-none rounded-sm mb-1"
+                placeholder="Honeymoon Fund / Couch Fund"
+              />
+              <input
+                type="text"
+                value={fundCard.description || ""}
+                onChange={e => updateRegistryMainCard("cash_fund", "description", e.target.value)}
+                className="w-full border border-sage/25 p-1.5 text-xs outline-none rounded-sm mb-1"
+                placeholder="Card description on homepage..."
+              />
+              <input
+                type="text"
+                value={fundCard.button_text || ""}
+                onChange={e => updateRegistryMainCard("cash_fund", "button_text", e.target.value)}
+                className="w-full border border-sage/25 p-1.5 text-xs outline-none rounded-sm"
+                placeholder="Contribute to Fund"
+              />
+            </div>
+
+            <div className="bg-white border border-sage/20 p-3 rounded-sm space-y-2">
+              <label className="block text-[9px] uppercase tracking-widest text-terracotta font-semibold">Homepage Card 2: Gift & Item Registry Card</label>
+              <input
+                type="text"
+                value={storeCard.title || ""}
+                onChange={e => updateRegistryMainCard("store", "title", e.target.value)}
+                className="w-full border border-sage/25 p-1.5 text-xs outline-none rounded-sm mb-1"
+                placeholder="Gift & Item Registry"
+              />
+              <input
+                type="text"
+                value={storeCard.description || ""}
+                onChange={e => updateRegistryMainCard("store", "description", e.target.value)}
+                className="w-full border border-sage/25 p-1.5 text-xs outline-none rounded-sm mb-1"
+                placeholder="Card description on homepage..."
+              />
+              <input
+                type="text"
+                value={storeCard.button_text || ""}
+                onChange={e => updateRegistryMainCard("store", "button_text", e.target.value)}
+                className="w-full border border-sage/25 p-1.5 text-xs outline-none rounded-sm"
+                placeholder="View Registry Items"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Cash / Custom Fund Settings */}
+        <div className="bg-cream/15 border border-sage/15 p-5 rounded-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-sage/15 pb-2">
+            <h3 className="text-sm font-serif font-semibold text-charcoal uppercase tracking-wider">2. Featured Cash / Custom Fund (Stripe, Venmo, or Custom)</h3>
+            <label className="flex items-center gap-2 text-xs font-sans text-charcoal/70 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cashFund.enabled !== false}
+                onChange={e => updateCashFundField("enabled", e.target.checked)}
+                className="rounded border-sage/35 text-sage focus:ring-sage"
+              />
+              <span>Enable Fund</span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Fund Title</label>
+              <input
+                type="text"
+                value={cashFund.title || ""}
+                onChange={e => updateCashFundField("title", e.target.value)}
+                className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
+                placeholder="Honeymoon Fund / New Home Fund"
+              />
+            </div>
+            <div>
+              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Subtitle / Category</label>
+              <input
+                type="text"
+                value={cashFund.subtitle || ""}
+                onChange={e => updateCashFundField("subtitle", e.target.value)}
+                className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
+                placeholder="Honeymoon & Travel Expenses"
+              />
+            </div>
+            <div>
+              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Badge / Tag</label>
+              <input
+                type="text"
+                value={cashFund.tag || ""}
+                onChange={e => updateCashFundField("tag", e.target.value)}
+                className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
+                placeholder="Cash Fund"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[9px] uppercase tracking-widest text-terracotta mb-1 font-semibold">Payment Link URL (Stripe, Venmo, etc.)</label>
+              <input
+                type="url"
+                value={cashFund.payment_url || cashFund.stripe_url || ""}
+                onChange={e => updateCashFundField("payment_url", e.target.value)}
+                className="w-full border border-sage/35 p-2 bg-white text-xs outline-none focus:border-terracotta rounded-sm font-mono"
+                placeholder="https://donate.stripe.com/..."
+              />
+              <span className="text-[9px] text-charcoal/40 italic block mt-1">Paste your Stripe Payment Link, Venmo, or custom donation link here.</span>
+            </div>
+            <div>
+              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Button Text</label>
+              <input
+                type="text"
+                value={cashFund.button_text || ""}
+                onChange={e => updateCashFundField("button_text", e.target.value)}
+                className="w-full border border-sage/25 p-2 bg-white text-xs outline-none focus:border-sage rounded-sm"
+                placeholder="Contribute with Card / Apple Pay"
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">Section Description</label>
-            <input
-              type="text"
-              value={tempConfigData.description || ""}
-              onChange={e => updateField("description", e.target.value)}
-              className="w-full border border-sage/35 p-2 bg-cream/20 text-sm outline-none focus:border-sage rounded-sm"
+            <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Fund Description</label>
+            <textarea
+              value={cashFund.description || ""}
+              onChange={e => updateCashFundField("description", e.target.value)}
+              className="w-full border border-sage/25 p-2 bg-white text-xs outline-none focus:border-sage h-16 resize-none rounded-sm"
+              placeholder="Help us make our dream honeymoon or home project unforgettable!..."
             />
           </div>
         </div>
 
-        <div className="border-t border-sage/15 pt-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-serif text-charcoal">Registry Funds & Links</h3>
+        {/* Curated Registry Items */}
+        <div className="bg-cream/15 border border-sage/15 p-5 rounded-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-sage/15 pb-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-serif font-semibold text-charcoal uppercase tracking-wider">3. Curated Registry Items (Direct Store Links, Photos & Prices)</h3>
+              <span className="text-xs text-charcoal/50">({items.length} items)</span>
+            </div>
             <button
-              onClick={addRegistryFundItem}
+              onClick={addRegistryItem}
               className="flex items-center gap-1.5 px-3 py-1.5 border border-sage text-sage uppercase tracking-wider text-[10px] rounded-sm hover:bg-sage hover:text-white transition-all cursor-pointer font-semibold"
             >
               <Plus size={11} />
-              Add Registry Fund
+              Add Registry Item
             </button>
           </div>
 
           <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-            {(tempConfigData.funds || []).map((item: any, idx: number) => (
-              <div key={idx} className="bg-cream/15 border border-sage/15 p-4 rounded-sm relative group space-y-3">
+            {items.map((item: any, idx: number) => (
+              <div key={item.id || idx} className="bg-white border border-sage/20 p-4 rounded-sm relative group space-y-4 shadow-xs">
                 <button
-                  onClick={() => deleteRegistryFundItem(idx)}
-                  className="absolute top-4 right-4 p-1 text-rose-500 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                  onClick={() => deleteRegistryItem(idx)}
+                  className="absolute top-3.5 right-3.5 p-1 text-rose-500 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                  title="Delete item"
                 >
                   <Trash2 size={14} />
                 </button>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pr-8">
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Fund Title</label>
-                    <input
-                      type="text"
-                      value={item.title || ""}
-                      onChange={e => updateRegistryFundItem(idx, "title", e.target.value)}
-                      className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
-                      placeholder="e.g. Honeymoon Fund"
-                    />
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  {/* Photo Thumbnail / Preview */}
+                  <div className="w-20 h-20 shrink-0 bg-cream/30 border border-sage/20 rounded-sm overflow-hidden flex items-center justify-center relative">
+                    {item.image_url ? (
+                      <img
+                        src={item.image_url}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <span className="text-[9px] text-charcoal/40 font-sans text-center px-1">No Image</span>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Button Text</label>
-                    <input
-                      type="text"
-                      value={item.button_text || "Send a Gift"}
-                      onChange={e => updateRegistryFundItem(idx, "button_text", e.target.value)}
-                      className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Icon Type (Heart | Gift)</label>
-                    <input
-                      type="text"
-                      value={item.icon || "Heart"}
-                      onChange={e => updateRegistryFundItem(idx, "icon", e.target.value)}
-                      className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
-                    />
-                  </div>
-                </div>
 
-                <div>
-                  <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Registry URL</label>
-                  <input
-                    type="url"
-                    value={item.url || ""}
-                    onChange={e => updateRegistryFundItem(idx, "url", e.target.value)}
-                    className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
-                    placeholder="https://www.zola.com/registry/..."
-                  />
-                </div>
+                  <div className="flex-1 w-full space-y-3 pr-8">
+                    {/* Row 1: Title, Category, Price */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Item Title</label>
+                        <input
+                          type="text"
+                          value={item.title || ""}
+                          onChange={e => updateRegistryItem(idx, "title", e.target.value)}
+                          className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm"
+                          placeholder="e.g. Dutch Oven"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Category</label>
+                        <input
+                          type="text"
+                          value={item.category || item.tag || ""}
+                          onChange={e => updateRegistryItem(idx, "category", e.target.value)}
+                          className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm"
+                          placeholder="Kitchen | Dining | Bedding"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Price / Value</label>
+                        <input
+                          type="text"
+                          value={item.price || item.suggestedAmount || ""}
+                          onChange={e => updateRegistryItem(idx, "price", e.target.value)}
+                          className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm"
+                          placeholder="e.g. $420"
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Short Description</label>
-                  <textarea
-                    value={item.description || ""}
-                    onChange={e => updateRegistryFundItem(idx, "description", e.target.value)}
-                    className="w-full border border-sage/25 p-2 bg-white text-xs outline-none focus:border-sage h-16 resize-none rounded-sm"
-                  />
+                    {/* Row 2: Store Name, Image URL */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Store / Retailer Name</label>
+                        <input
+                          type="text"
+                          value={item.store_name || item.store || ""}
+                          onChange={e => updateRegistryItem(idx, "store_name", e.target.value)}
+                          className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm"
+                          placeholder="e.g. Williams Sonoma / Target"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Photo Image URL</label>
+                        <input
+                          type="url"
+                          value={item.image_url || ""}
+                          onChange={e => updateRegistryItem(idx, "image_url", e.target.value)}
+                          className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm font-mono text-[11px]"
+                          placeholder="https://images.unsplash.com/... or store image link"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 3: Direct Item Link & Full Store Link */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[9px] uppercase tracking-widest text-terracotta mb-1 font-semibold">Direct Item Registry URL</label>
+                        <input
+                          type="url"
+                          value={item.item_url || item.url || ""}
+                          onChange={e => {
+                            updateRegistryItem(idx, "item_url", e.target.value);
+                            updateRegistryItem(idx, "url", e.target.value);
+                          }}
+                          className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-terracotta rounded-sm font-mono text-[11px]"
+                          placeholder="https://www.williams-sonoma.com/products/..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Full Store Registry URL (Optional)</label>
+                        <input
+                          type="url"
+                          value={item.store_url || ""}
+                          onChange={e => updateRegistryItem(idx, "store_url", e.target.value)}
+                          className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm font-mono text-[11px]"
+                          placeholder="https://www.williams-sonoma.com/registry/..."
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 4: Description */}
+                    <div>
+                      <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Short Description / Notes</label>
+                      <input
+                        type="text"
+                        value={item.description || ""}
+                        onChange={e => updateRegistryItem(idx, "description", e.target.value)}
+                        className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm"
+                        placeholder="e.g. 5.5 Qt Dutch Oven in Matte White..."
+                      />
+                    </div>
+
+                    {/* Row 5: Status Toggles & Purchaser Details */}
+                    <div className="flex flex-wrap items-center justify-between gap-4 pt-1 border-t border-sage/10">
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 text-xs font-sans text-charcoal/80 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(item.is_purchased)}
+                            onChange={e => {
+                              updateRegistryItem(idx, "is_purchased", e.target.checked);
+                              if (!e.target.checked) {
+                                updateRegistryItem(idx, "purchased_by", null);
+                                updateRegistryItem(idx, "purchased_at", null);
+                              }
+                            }}
+                            className="rounded border-emerald-500 text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span className="font-medium text-emerald-800">Mark as Purchased / Claimed</span>
+                        </label>
+
+                        {item.is_purchased && (
+                          <div className="inline-flex items-center gap-1.5 text-[11px] font-sans bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded">
+                            <span>Claimed by: <strong>{item.purchased_by || "A wedding guest"}</strong></span>
+                            {item.purchased_at && (
+                              <span className="text-[10px] text-emerald-600/80">({new Date(item.purchased_at).toLocaleDateString()})</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <label className="flex items-center gap-2 text-xs font-sans text-charcoal/70 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={item.enabled !== false}
+                          onChange={e => updateRegistryItem(idx, "enabled", e.target.checked)}
+                          className="rounded border-sage/35 text-sage focus:ring-sage"
+                        />
+                        <span>Show on Registry</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
 
-            {(tempConfigData.funds || []).length === 0 && (
-              <p className="text-xs text-charcoal/40 italic py-6 text-center">No registry funds defined. Click 'Add Registry Fund' to create links.</p>
+            {items.length === 0 && (
+              <p className="text-xs text-charcoal/40 italic py-6 text-center">No curated gift items added yet. Click 'Add Registry Item' to add one.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Partner Store Registries */}
+        <div className="bg-cream/15 border border-sage/15 p-5 rounded-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-sage/15 pb-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-serif font-semibold text-charcoal uppercase tracking-wider">4. Partner Store Registries (Complete Lists)</h3>
+              <span className="text-xs text-charcoal/50">({stores.length} stores)</span>
+            </div>
+            <button
+              onClick={addRegistryStore}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-sage text-sage uppercase tracking-wider text-[10px] rounded-sm hover:bg-sage hover:text-white transition-all cursor-pointer font-semibold"
+            >
+              <Plus size={11} />
+              Add Store Registry
+            </button>
+          </div>
+
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+            {stores.map((store: any, idx: number) => (
+              <div key={store.id || idx} className="bg-white border border-sage/20 p-4 rounded-sm relative group space-y-3 shadow-xs">
+                <button
+                  onClick={() => deleteRegistryStore(idx)}
+                  className="absolute top-3.5 right-3.5 p-1 text-rose-500 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                  title="Delete store"
+                >
+                  <Trash2 size={14} />
+                </button>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pr-8">
+                  <div>
+                    <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Store Name</label>
+                    <input
+                      type="text"
+                      value={store.name || ""}
+                      onChange={e => updateRegistryStore(idx, "name", e.target.value)}
+                      className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm"
+                      placeholder="e.g. Williams Sonoma / Target"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Store Badge</label>
+                    <input
+                      type="text"
+                      value={store.badge || ""}
+                      onChange={e => updateRegistryStore(idx, "badge", e.target.value)}
+                      className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm"
+                      placeholder="Williams Sonoma"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Full Store Registry URL</label>
+                    <input
+                      type="url"
+                      value={store.url || ""}
+                      onChange={e => updateRegistryStore(idx, "url", e.target.value)}
+                      className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm font-mono text-[11px]"
+                      placeholder="https://www.williams-sonoma.com/registry/..."
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="md:col-span-2">
+                    <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Description</label>
+                    <input
+                      type="text"
+                      value={store.description || ""}
+                      onChange={e => updateRegistryStore(idx, "description", e.target.value)}
+                      className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm"
+                      placeholder="Premium cookware and tabletop..."
+                    />
+                  </div>
+                  <div className="flex items-center pt-4">
+                    <label className="flex items-center gap-2 text-xs font-sans text-charcoal/70 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={store.enabled !== false}
+                        onChange={e => updateRegistryStore(idx, "enabled", e.target.checked)}
+                        className="rounded border-sage/35 text-sage focus:ring-sage"
+                      />
+                      <span>Show on Registry</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {stores.length === 0 && (
+              <p className="text-xs text-charcoal/40 italic py-6 text-center">No partner store registries added yet. Click 'Add Store Registry' to add one.</p>
             )}
           </div>
         </div>

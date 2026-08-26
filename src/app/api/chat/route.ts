@@ -74,9 +74,17 @@ function buildSystemPrompt(): string {
     .join('\n');
 
   // Registry
-  const registryText = (registryConfig.funds as any[])
-    .map((r) => `- ${r.title}: ${r.description || ''}${r.url ? ' (Link: ' + r.url + ')' : ''}`)
+  const fundObj = (registryConfig as any).cash_fund || (registryConfig as any).honeymoon_fund;
+  const fundText = fundObj 
+    ? `- ${fundObj.title || 'Cash Fund'}: ${fundObj.description || ''} (Link: ${fundObj.payment_url || fundObj.stripe_url || ''})` 
+    : '';
+  const registryItemsText = ((registryConfig as any).items || [])
+    .map((r: any) => `- ${r.title}${r.price ? ` (${r.price})` : ''} from ${r.store_name || r.store || 'Registry'}: ${r.description || ''}${r.item_url || r.url ? ' (Link: ' + (r.item_url || r.url) + ')' : ''}`)
     .join('\n');
+  const registryStoresText = ((registryConfig as any).stores || [])
+    .map((s: any) => `- ${s.name}: ${s.description || ''} (Link: ${s.url})`)
+    .join('\n');
+  const registryText = [fundText, registryItemsText, registryStoresText].filter(Boolean).join('\n');
 
   // DJ Lineup
   const djText = (djConfig.events as any[])
