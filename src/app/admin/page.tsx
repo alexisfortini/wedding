@@ -1739,7 +1739,7 @@ export default function AdminPage() {
                   <label className="block text-[9px] uppercase tracking-widest text-charcoal/50 mb-1 font-semibold">Coming Soon Message</label>
                   <input
                     type="text"
-                    value={tempConfigData.coming_soon_message || "We are currently finalizing our registry. Please check back soon!"}
+                    value={tempConfigData.coming_soon_message || "We are currently finalizing our registry items & cash fund options. Please check back soon!"}
                     onChange={e => updateField("coming_soon_message", e.target.value)}
                     className="w-full border border-sage/35 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
                     placeholder="We are currently finalizing our registry..."

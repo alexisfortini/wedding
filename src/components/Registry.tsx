@@ -203,7 +203,7 @@ export default function Registry() {
               {config.coming_soon_title || "Registry Coming Soon"}
             </h3>
             <p className="font-serif italic text-cream/80 text-base max-w-md mx-auto leading-relaxed">
-              {config.coming_soon_message || "Having you celebrate with us is the greatest gift of all. We are currently finalizing our registry & cash fund options. Please check back soon!"}
+              {config.coming_soon_message || "We are currently finalizing our registry items & cash fund options. Please check back soon!"}
             </p>
           </motion.div>
         ) : (
