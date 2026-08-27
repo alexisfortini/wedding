@@ -376,10 +376,45 @@ export const mockDatabase = {
       console.warn("Supabase findGuestByName failed, using local DEFAULT_GUESTS:", e);
     }
 
-    const found = DEFAULT_GUESTS.find(
-      g => g.first_name.toLowerCase().trim() === firstName.toLowerCase().trim() &&
-           g.last_name.toLowerCase().trim() === lastName.toLowerCase().trim()
-    );
+    const normalize = (str: string) => 
+      (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+    const targetFirst = normalize(firstName);
+    const targetLast = normalize(lastName);
+
+    // Common nickname aliases map
+    const aliases: Record<string, string[]> = {
+      "frankie": ["franklin", "frank"],
+      "franklin": ["frankie", "frank"],
+      "frank": ["frankie", "franklin"],
+      "zac": ["zach", "zachary"],
+      "zach": ["zac", "zachary"],
+      "zachary": ["zac", "zach"],
+      "becky": ["rebecca", "becca"],
+      "rebecca": ["becky", "becca"],
+      "dan": ["daniel"],
+      "daniel": ["dan"],
+      "matt": ["matthew"],
+      "matthew": ["matt"],
+      "tom": ["thomas"],
+      "thomas": ["tom"],
+      "tim": ["timothy"],
+      "timothy": ["tim"],
+      "alex": ["alexis", "alexander", "alexandra"],
+      "alexis": ["alex"],
+      "sam": ["samuel", "samantha"],
+      "samuel": ["sam"],
+      "samantha": ["sam"]
+    };
+
+    const targetFirstVariants = [targetFirst, ...(aliases[targetFirst] || [])];
+
+    const found = DEFAULT_GUESTS.find(g => {
+      const gFirst = normalize(g.first_name);
+      const gLast = normalize(g.last_name);
+      return targetFirstVariants.includes(gFirst) && gLast === targetLast;
+    });
+
     if (found) {
       const party = DEFAULT_PARTIES.find(p => p.id === found.party_id);
       return {

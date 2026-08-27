@@ -104,35 +104,7 @@ export default function GuestGate({ onAccessGranted }: GuestGateProps) {
           localStorage.setItem("wedding_guest", JSON.stringify(localGuest));
           grantAccess(localGuest);
         } else {
-          // Create new guest in mockDatabase if not found, to allow seamless test logins
-          const newGuestId = typeof crypto !== "undefined" && crypto.randomUUID 
-            ? crypto.randomUUID() 
-            : `mock-${Date.now()}`;
-          
-          const newGuest = {
-            id: newGuestId,
-            first_name: firstName.trim(),
-            last_name: lastName.trim(),
-            email: "",
-            phone: "",
-            party_id: null,
-            rsvp_status: "pending",
-            notes: "",
-            is_plus_one: false,
-            parent_guest_id: null,
-            plus_ones_allowed: 0,
-            age: "Adult",
-            needs_highchair: false,
-            in_wheelchair: false
-          };
-          await mockDatabase.saveGuest(newGuest as Guest);
-          
-          const saved = await mockDatabase.findGuestByName(firstName, lastName) || {
-            ...newGuest,
-            parties: null
-          };
-          localStorage.setItem("wedding_guest", JSON.stringify(saved));
-          grantAccess(saved);
+          setError(`Unable to find an invitation for ${firstName.trim()} ${lastName.trim()}. Please check spelling or contact Alexis & Kelsey.`);
         }
       } catch (innerErr) {
         console.error("Database access failed:", innerErr);
