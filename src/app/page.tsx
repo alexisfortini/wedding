@@ -25,23 +25,31 @@ export default function Home() {
     mockDatabase.getSiteConfig("admin", adminConfigDefault).then(setConfig);
   }, []);
 
-  // Ensure browser always lands at the top of the homepage on login / session grant
+  // Disable browser automatic scroll restoration and force top scroll on mount & guest grant
   useEffect(() => {
-    if (guest) {
-      const resetScroll = () => {
-        window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
-        document.body.scrollTop = 0;
-        document.documentElement.scrollTop = 0;
-        if (window.location.hash) {
-          history.replaceState(null, "", window.location.pathname);
-        }
-      };
-
-      resetScroll();
-      // Secondary check after mobile reflow
-      const timer = setTimeout(resetScroll, 60);
-      return () => clearTimeout(timer);
+    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
     }
+
+    const resetScroll = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+      if (window.location.hash) {
+        history.replaceState(null, "", window.location.pathname);
+      }
+    };
+
+    resetScroll();
+    const t1 = setTimeout(resetScroll, 50);
+    const t2 = setTimeout(resetScroll, 150);
+    const t3 = setTimeout(resetScroll, 350);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   }, [guest]);
 
   if (!guest) {
