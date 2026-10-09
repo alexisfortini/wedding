@@ -73,11 +73,20 @@ function buildSystemPrompt(): string {
     .map((s) => `- ${s.year || ''}: ${s.title} — ${s.description || ''}`)
     .join('\n');
 
-  // Registry
+  // Registry & Honeymoon Fund
   const fundObj = (registryConfig as any).cash_fund || (registryConfig as any).honeymoon_fund;
-  const fundText = fundObj 
-    ? `- ${fundObj.title || 'Cash Fund'}: ${fundObj.description || ''} (Link: ${fundObj.payment_url || fundObj.stripe_url || ''})` 
-    : '';
+  let fundText = '';
+  if (fundObj) {
+    const parts = [
+      `- ${fundObj.title || 'Honeymoon Fund'}: ${fundObj.description || ''}`,
+      fundObj.venmo_handle ? `Venmo Handle: ${fundObj.venmo_handle}` : '',
+      fundObj.zelle_recipient ? `Zelle Recipient: ${fundObj.zelle_recipient}` : '',
+      fundObj.zelle_email ? `Zelle Email: ${fundObj.zelle_email}` : '',
+      fundObj.zelle_phone ? `Zelle Phone: ${fundObj.zelle_phone}` : '',
+      fundObj.payment_url ? `Payment Link: ${fundObj.payment_url}` : '',
+    ].filter(Boolean);
+    fundText = parts.join(' | ');
+  }
   const registryItemsText = ((registryConfig as any).items || [])
     .map((r: any) => `- ${r.title}${r.price ? ` (${r.price})` : ''} from ${r.store_name || r.store || 'Registry'}: ${r.description || ''}${r.item_url || r.url ? ' (Link: ' + (r.item_url || r.url) + ')' : ''}`)
     .join('\n');
@@ -135,7 +144,7 @@ ${djText}
 2. Keep responses brief but incredibly warm and helpful. Use emojis sparingly.
 3. If asked about weather, ALWAYS use the getLiveWeather tool to check real API forecast data.
 4. If a guest asks to check if they are on the list, ALWAYS use checkRSVPStatus tool.
-5. For registry questions, share the direct links provided above.
+5. For registry and gift questions, let guests know they can contribute to our Honeymoon Fund directly via Venmo or Zelle (with instant live progress tracking on our site), or browse our curated physical registry items. Share the exact handles and details provided above.
 `;
 }
 

@@ -1,20 +1,127 @@
 {
   "title": "Registry",
-  "description": "Your presence is our greatest gift. Should you wish to honor us, we have registered a few dreams below.",
-  "funds": [
-    {
+  "description": "Having you celebrate with us is the greatest gift of all. If you would like to honor us with a gift, you can browse our registry options below.",
+  "hide_registry": false,
+  "coming_soon_title": "Registry Coming Soon",
+  "coming_soon_message": "We are currently finalizing our registry items & cash fund options. Please check back soon!",
+  "main_cards": {
+    "cash_fund": {
       "title": "Honeymoon Fund",
-      "description": "Contribute toward our tropical getaway next summer, creating memories that will last a lifetime.",
-      "button_text": "Send a Gift",
+      "description": "Contribute toward our getaway and the memories we’ll make together.",
+      "button_text": "Contribute to Honeymoon Fund",
       "icon": "Heart",
-      "url": "https://www.zola.com/registry/alexisandkelsey"
+      "enabled": true
+    },
+    "store": {
+      "title": "Gift Registry",
+      "description": "Browse curated items for our home and partner store registries.",
+      "button_text": "View Registry Items",
+      "icon": "Gift",
+      "enabled": true
+    }
+  },
+  "cash_fund": {
+    "enabled": true,
+    "title": "Honeymoon Fund",
+    "subtitle": "Honeymoon & Travel Expenses",
+    "description": "Contribute toward our getaway and the memories we’ll make together.",
+    "button_text": "Contribute to Honeymoon Fund",
+    "tag": "Honeymoon Fund",
+    "target_amount": 5000,
+    "initial_raised": 0,
+    "venmo_handle": "@Alexis-Fortini",
+    "venmo_qr_image": "/images/venmo-qr.png",
+    "zelle_recipient": "Alexis Fortini",
+    "zelle_email": "axs.fortini@gmail.com",
+    "zelle_phone": "425-283-7699",
+    "payment_url": "https://venmo.com/?txn=pay&recipients=Alexis-Fortini&note=Honeymoon%20Fund"
+  },
+  "items": [
+    {
+      "id": "item-1",
+      "title": "Le Creuset Enameled Cast Iron Round Dutch Oven",
+      "store_name": "Williams Sonoma",
+      "store_url": "https://www.williams-sonoma.com",
+      "item_url": "https://www.williams-sonoma.com",
+      "price": "$420",
+      "image_url": "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=600&q=80",
+      "category": "Kitchen",
+      "is_purchased": false,
+      "description": "5.5 Qt Dutch Oven in Matte White for soups and artisan bread.",
+      "enabled": true
     },
     {
-      "title": "Couch Fund",
-      "description": "Help us feather our nest! Contribute toward a beautiful new sofa for our living room.",
-      "button_text": "Send a Gift",
-      "icon": "Gift",
-      "url": "https://www.zola.com/registry/alexisandkelsey"
+      "id": "item-2",
+      "title": "KitchenAid Artisan Series 5-Quart Stand Mixer",
+      "store_name": "Target",
+      "store_url": "https://www.target.com",
+      "item_url": "https://www.target.com",
+      "price": "$379",
+      "image_url": "https://images.unsplash.com/photo-1594385208974-2e75f8d7bb48?auto=format&fit=crop&w=600&q=80",
+      "category": "Appliances",
+      "is_purchased": false,
+      "description": "Versatile stand mixer with dough hook and flat beater.",
+      "enabled": true
+    },
+    {
+      "id": "item-3",
+      "title": "Belgian Flax Linen Sheet Set",
+      "store_name": "Crate & Barrel",
+      "store_url": "https://www.crateandbarrel.com",
+      "item_url": "https://www.crateandbarrel.com",
+      "price": "$280",
+      "image_url": "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80",
+      "category": "Bedding",
+      "is_purchased": false,
+      "description": "Breathable, pure organic linen sheets in Natural Flax.",
+      "enabled": true
+    },
+    {
+      "id": "item-4",
+      "title": "Handblown Crystal Red Wine Glasses (Set of 6)",
+      "store_name": "Williams Sonoma",
+      "store_url": "https://www.williams-sonoma.com",
+      "item_url": "https://www.williams-sonoma.com",
+      "price": "$120",
+      "image_url": "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=600&q=80",
+      "category": "Dining",
+      "is_purchased": false,
+      "description": "Ultra-thin European crystal glasses for entertaining guests.",
+      "enabled": true
+    }
+  ],
+  "stores": [
+    {
+      "id": "store-1",
+      "name": "Williams Sonoma",
+      "description": "Premium cookware, bakery items, and specialty tools.",
+      "url": "https://www.williams-sonoma.com",
+      "badge": "Williams Sonoma",
+      "enabled": true
+    },
+    {
+      "id": "store-2",
+      "name": "Target",
+      "description": "Everyday home essentials, kitchenware, and living accessories.",
+      "url": "https://www.target.com",
+      "badge": "Target",
+      "enabled": true
+    },
+    {
+      "id": "store-3",
+      "name": "Crate & Barrel",
+      "description": "Modern furniture, dinnerware, and interior home accents.",
+      "url": "https://www.crateandbarrel.com",
+      "badge": "Crate & Barrel",
+      "enabled": true
+    },
+    {
+      "id": "store-4",
+      "name": "Amazon",
+      "description": "Smart home gadgets, kitchen accessories, and outdoor gear.",
+      "url": "https://www.amazon.com",
+      "badge": "Amazon",
+      "enabled": true
     }
   ]
 }

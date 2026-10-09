@@ -1,40 +1,75 @@
 {
   "title": "Travel & Accommodations",
-  "description": "Getting to our desert home and finding a beautiful place to rest.",
-  "airports": [
-    {
-      "title": "Palm Springs (PSP)",
-      "description": "The most convenient gateway. Less than 40 minutes from the celebration.",
-      "tag": "Highly Recommended"
-    },
-    {
-      "title": "Los Angeles (LAX)",
-      "description": "More flight paths, but requires a scenic 2.5 to 3.5 hour drive depending on traffic.",
-      "tag": "Rental Car Needed"
-    }
-  ],
   "hotels": [
     {
-      "title": "La Quinta Resort",
-      "description": "A historic desert sanctuary featuring multiple pools, gardens, and clay tennis courts.",
-      "book_url": "#"
+      "title": "La Quinta Resort and Club",
+      "book_url": "https://www.laquintaresort.com",
+      "description": "A historic desert sanctuary featuring multiple pools, beautiful gardens, and world-class tennis courts."
+    },
+    {
+      "title": "Tommy Bahama Miramonte",
+      "book_url": "https://www.tommybahamamiramonte.com",
+      "description": "A chic, relaxing desert retreat in Indian Wells surrounded by olive trees and mountain views."
+    },
+    {
+      "title": "Grand Hyatt Indian Wells",
+      "book_url": "https://www.hyatt.com/grand-hyatt/en-US/champ-grand-hyatt-indian-wells-resort-and-villas",
+      "description": "Sprawling luxury resort with golf courses, massive pools, and mountain vistas."
+    },
+    {
+      "title": "Renaissance Esmeralda",
+      "book_url": "https://www.marriott.com/en-us/hotels/pspsr-renaissance-esmeralda-resort-and-spa-indian-wells/overview/",
+      "description": "A relaxing and comfortable foothills resort featuring spacious grounds and a sand-beach pool."
     },
     {
       "title": "JW Marriott Desert Springs",
-      "description": "Sprawling lakeside resort with boat rides, palm tree trails, and local desert wildlife.",
-      "book_url": "#"
+      "book_url": "https://www.marriott.com/en-us/hotels/ctdds-jw-marriott-desert-springs-resort-and-spa/overview/",
+      "description": "A sprawling lakeside oasis featuring scenic boat rides, championship golf, and resident pink flamingos."
+    },
+    {
+      "title": "Airbnb & Vacation Rentals",
+      "book_url": "https://www.airbnb.com/s/Indio--CA/homes",
+      "description": "Private desert homes and villas in Indio, La Quinta, or Palm Desert—perfect for groups."
+    }
+  ],
+  "airports": [
+    {
+      "tag": "Closest Option",
+      "title": "Palm Springs (PSP)",
+      "description": "The closest airport, only a 30-minute drive to Indio, though it offers fewer direct flight options."
+    },
+    {
+      "tag": "Good Option",
+      "title": "Ontario (ONT)",
+      "description": "A highly convenient and stress-free option, situated about a 1.5-hour drive from Indio."
+    },
+    {
+      "tag": "Most Flight Options",
+      "title": "Los Angeles (LAX)",
+      "description": "Offers the most flight options and carriers, but requires a 2.5-hour drive depending on traffic."
     }
   ],
   "favorites": [
     {
-      "title": "Local Coffee Shop",
-      "description": "Our favorite local morning routine for signature cold brews and organic matchas.",
-      "icon": "Coffee"
+      "icon": "MapPin",
+      "title": "Joshua Tree National Park",
+      "description": "A breathtaking national park filled with Mojave wilderness, famous rock formations, and desert trails."
     },
     {
-      "title": "Joshua Tree National Park",
-      "description": "A breathtaking national park filled with Mojave wilderness. Best viewed at dawn.",
-      "icon": "MapPin"
+      "icon": "MapPin",
+      "title": "Palm Springs Aerial Tramway",
+      "description": "Ride the world's largest rotating tram car up the cliffs of Chino Canyon for panoramic views."
+    },
+    {
+      "icon": "MapPin",
+      "title": "Desert Hiking",
+      "description": "Explore scenic trails like Indian Canyons, Bump and Grind, or Tahquitz Canyon."
+    },
+    {
+      "icon": "MapPin",
+      "title": "Championship Golf",
+      "description": "Tee off at PGA West or other world-renowned public courses in La Quinta and Indian Wells."
     }
-  ]
+  ],
+  "description": "Getting to our desert home and finding a beautiful place to rest."
 }

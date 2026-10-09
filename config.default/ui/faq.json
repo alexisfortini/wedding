@@ -1,14 +1,38 @@
 {
-  "title": "Details & Curiosities",
-  "subtitle": "A few practical answers to help you plan your getaway.",
   "list": [
     {
-      "q": "What is the dress code?",
-      "a": "Welcome Party: 'Desert Casual' (light linens, relaxed tailoring, comfortable footwear). Wedding Day: 'Desert Formal' (suits in lighter or neutral tones, elegant midi or maxi length dresses). Keep in mind the desert temperature cools down after sunset, so we recommend bringing a light layer."
+      "a": "You can RSVP directly here on our website by visiting the RSVP page and entering your first and last name. We kindly ask that you submit your response by February 6, 2027, to help us finalize our arrangements with our venue and vendors.",
+      "q": "How do I RSVP and what is the deadline?"
     },
     {
-      "q": "Are children invited?",
-      "a": "While we love your families, our wedding weekend events are adults-only."
+      "a": "Due to venue capacity constraints, we are only able to accommodate the guests specifically listed on your invitation. If your invitation includes an allocated guest slot, you will see the option to enter their details during the RSVP process. If your circumstances have changed or you would like to request a plus one for a new partner we haven't yet met, please reach out to Alexis or Kelsey directly.",
+      "q": "Can I bring a plus one?"
+    },
+    {
+      "a": "Yes, both our ceremony and reception are outdoor affairs. The ceremony and lawn areas are situated on grass, so we highly recommend wearing footwear suitable for grass, such as block heels, wedges, or dressy flats.",
+      "q": "Is the wedding outdoors? What shoes are recommended?"
+    },
+    {
+      "a": "Welcome Party: Desert Casual\nThink elevated poolside style with a relaxed, breezy feel. Lightweight fabrics, sundresses, linen sets, polished resort wear, and comfortable footwear are all welcome. Feel free to bring a swimsuit if you'd like to take a dip—we'd love to see guests enjoying the pool! Stylish cover-ups, matching sets, and other chic poolside attire are encouraged.\n\nWedding Day: Desert Formal\nSophisticated and elegant attire inspired by the desert landscape. We invite gentlemen to wear suits in lighter colors, earthy tones, or lightweight fabrics (black tie is not required). We invite ladies to wear elegant cocktail dresses, midi dresses, or floor-length gowns. Block heels, wedges, or other footwear suitable for outdoor walking are recommended.\n\nDesert Weather Tip\nWhile afternoons are warm and sunny, desert temperatures can drop quickly after sunset. We highly recommend bringing a light layer—such as a wrap, shawl, or blazer—to stay comfortable once the stars come out.",
+      "q": "What is the dress code?"
+    },
+    {
+      "a": "The estate does not have guest parking available on-site, so we kindly ask guests to arrive via rideshare services like Uber or Lyft. However, exceptions will be made for brief drop-offs (such as families with small children or guests requiring wheelchair/accessibility access). If you need to make drop-off arrangements, please let us know in advance.",
+      "q": "Is there parking at the venue?"
+    },
+    {
+      "a": "Little ones are welcome at our ceremony, but the welcome party and reception will be adults-only. Don't worry—we're planning to arrange babysitting services so parents can enjoy the festivities. More information will be provided closer to the big day.",
+      "q": "Are children invited?"
+    },
+    {
+      "a": "Mid-spring in Indio brings gorgeous sunny days (averaging 85°F) transitioning to fresh, clear nights (dropping to around 55°F). Both the ceremony and reception are outdoor affairs.",
+      "q": "What will the weather be like?"
+    },
+    {
+      "a": "The sooner, the better! April is an especially busy time in Indio and the surrounding desert cities, so we encourage guests to reserve accommodations early to secure their preferred location and rate. Be sure to check out our recommended hotels on the Travel page when making your plans.",
+      "q": "When should I book accommodations?"
     }
-  ]
+  ],
+  "title": "Details & Curiosities",
+  "subtitle": "A few practical answers to help you plan your desert getaway."
 }

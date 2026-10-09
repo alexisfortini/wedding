@@ -80,6 +80,17 @@ Key-value storage for layout details, image zoom/shifts, FAQs, and portal settin
 * `value`: `jsonb` (JSON data schema)
 * `updated_at`: `timestamp with time zone`
 
+### 8. `fund_contributions`
+Honeymoon Fund contributions and guest self-reporting for Venmo/Zelle gifts.
+* `id`: `uuid` (Primary Key)
+* `guest_name`: `text` (Name of contributing guest/party)
+* `amount`: `numeric(10,2)` (Contribution amount in USD)
+* `payment_method`: `text` (`'venmo'`, `'zelle'`, or `'cash'`)
+* `note`: `text` (Optional well-wishes or memo)
+* `is_verified`: `boolean` (Default `true`)
+* `is_public`: `boolean` (Default `true`, controls whether included in public running total)
+* `created_at`: `timestamp with time zone`
+
 ---
 
 ## 🔒 Row-Level Security (RLS) Configuration
@@ -87,12 +98,13 @@ Key-value storage for layout details, image zoom/shifts, FAQs, and portal settin
 All tables have RLS enabled in Supabase to protect data from unauthorized deletes and edits.
 
 ### Public Read Access
-* **Read-All**: The public anonymous client has read-only access to `parties`, `guests`, `groups`, `guest_groups`, `events`, and `guest_events` (`SELECT USING (true)`). This allows the frontend to retrieve login structures and visibility groups dynamically.
+* **Read-All**: The public anonymous client has read-only access to `parties`, `guests`, `groups`, `guest_groups`, `events`, `guest_events`, and `fund_contributions` (`SELECT USING (true)`). This allows the frontend to retrieve login structures, visibility groups, and the live running Honeymoon Fund total dynamically.
 
 ### Public Write Restrictions
 * **Guests Update**: Public users can update guest RSVP information (`UPDATE CHECK (true)`).
 * **Plus-One Management**: Public users are permitted to insert or delete guest records *only if* the record has `is_plus_one = true` (`INSERT WITH CHECK (is_plus_one = true)`).
 * **Events Updates**: Public users can insert or update entries in `guest_events` to log their event RSVP choices (`INSERT/UPDATE WITH CHECK (true)`).
+* **Fund Contributions**: Public guests can submit self-reported Venmo/Zelle contributions (`INSERT WITH CHECK (true)`). Updates and deletes are restricted or handled via the verified admin route.
 * **Configurations**: Direct public inserts, updates, or deletes to `site_configs` are entirely blocked by default.
 
 ---
@@ -101,6 +113,7 @@ All tables have RLS enabled in Supabase to protect data from unauthorized delete
 
 Because public write actions are restricted, the Admin dashboard performs save actions via server-side API routes that authenticate using the private `SUPABASE_SERVICE_ROLE_KEY` (bypassing RLS):
 
+* **`/api/fund-contributions`** 🎁: Manages guest contributions (GET list & total, POST new self-report, PATCH verify/public status, DELETE contribution) with offline JSON fallback.
 * **`/api/save-site-config`** 💾: Performs upserts on the `site_configs` table (e.g. updating FAQs, map markers, image crop adjustments, or general parameters).
 * **`/api/get-site-config`** 🔑: Securely reads configs from `site_configs` (allowing configurations to bypass client RLS blockers).
 * **`/api/sync-supabase-to-local`** 🔄: An endpoint enabling administrators to trigger a JSON seed save operation directly on the container.

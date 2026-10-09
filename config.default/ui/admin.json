@@ -1,9 +1,37 @@
 {
-  "passcode": "admin123",
   "admins": [
-    { "first": "groom", "last": "name" },
-    { "first": "bride", "last": "name" },
-    { "first": "gayle", "last": "hartfelder" },
-    { "first": "jack", "last": "hartfelder" }
-  ]
+    {
+      "last": "fortini",
+      "first": "alexis"
+    },
+    {
+      "last": "hartfelder",
+      "first": "kelsey"
+    },
+    {
+      "last": "hartfelder",
+      "first": "gayle"
+    },
+    {
+      "last": "hartfelder",
+      "first": "jack"
+    },
+    {
+      "last": "fortini",
+      "first": "nadia"
+    },
+    {
+      "last": "fortini",
+      "first": "christian"
+    },
+    {
+      "last": "fauls",
+      "first": "jessica"
+    },
+    {
+      "last": "murphy",
+      "first": "danielle"
+    }
+  ],
+  "passcode": "indio2027"
 }

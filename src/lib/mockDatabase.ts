@@ -17,6 +17,17 @@ import weekendConfig from "@config/ui/weekend.json";
 import { supabase } from "./supabase";
 
 // Types matching Supabase tables
+export interface FundContribution {
+  id: string;
+  guestName: string;
+  amount: number;
+  paymentMethod: 'venmo' | 'zelle' | 'cash';
+  note?: string;
+  createdAt: string; // ISO date
+  isVerified: boolean; // default true or pending
+  isPublic: boolean;   // default true (controls inclusion in total)
+}
+
 export interface Party {
   id: string;
   name: string;
@@ -104,6 +115,8 @@ const maleNames = new Set([
   "Zac", "Zach"
 ]);
 
+const seenSeedGuestIds = new Set<string>();
+
 guestsSeed.forEach((partyInfo: any) => {
   const isSinglePerson = partyInfo.guests && partyInfo.guests.length === 1;
   const partyId = isSinglePerson ? null : getDeterministicUUID("party-" + partyInfo.party_name);
@@ -133,23 +146,26 @@ guestsSeed.forEach((partyInfo: any) => {
 
   partyInfo.guests.forEach((guestInfo: any) => {
     const guestId = getDeterministicUUID(`guest-${guestInfo.first_name}-${guestInfo.last_name}`);
-    DEFAULT_GUESTS.push({
-      id: guestId,
-      first_name: guestInfo.first_name,
-      last_name: guestInfo.last_name,
-      email: guestInfo.email || null,
-      phone: guestInfo.phone || null,
-      party_id: partyId,
-      address: guestInfo.address || partyInfo.address || null,
-      rsvp_status: "pending",
-      notes: "",
-      is_plus_one: guestInfo.is_plus_one || false,
-      parent_guest_id: guestInfo.parent_guest_id || null,
-      plus_ones_allowed: guestInfo.plus_ones_allowed || 0,
-      age: guestInfo.age || "Adult",
-      needs_highchair: guestInfo.needs_highchair || false,
-      in_wheelchair: guestInfo.in_wheelchair || false
-    });
+    if (!seenSeedGuestIds.has(guestId)) {
+      seenSeedGuestIds.add(guestId);
+      DEFAULT_GUESTS.push({
+        id: guestId,
+        first_name: guestInfo.first_name,
+        last_name: guestInfo.last_name,
+        email: guestInfo.email || null,
+        phone: guestInfo.phone || null,
+        party_id: partyId,
+        address: guestInfo.address || partyInfo.address || null,
+        rsvp_status: "pending",
+        notes: "",
+        is_plus_one: guestInfo.is_plus_one || false,
+        parent_guest_id: guestInfo.parent_guest_id || null,
+        plus_ones_allowed: guestInfo.plus_ones_allowed || 0,
+        age: guestInfo.age || "Adult",
+        needs_highchair: guestInfo.needs_highchair || false,
+        in_wheelchair: guestInfo.in_wheelchair || false
+      });
+    }
 
     if (guestInfo.groups && Array.isArray(guestInfo.groups)) {
       guestInfo.groups.forEach((groupName: string) => {
@@ -256,7 +272,9 @@ export const mockDatabase = {
         .select("*")
         .order("last_name", { ascending: true })
         .order("first_name", { ascending: true });
-      if (!error && data && data.length > 0) return data;
+      if (!error && data && data.length > 0) {
+        return Array.from(new Map(data.map((g: any) => [g.id, g])).values());
+      }
     } catch (e) {
       console.warn("Supabase getGuests failed, using seed fallback:", e);
     }
@@ -593,6 +611,68 @@ export const mockDatabase = {
     const data = await res.json();
     if (!data.success) {
       throw new Error(data.error || "Failed to save configuration");
+    }
+  },
+
+  getFundContributions: async (): Promise<{ contributions: FundContribution[]; totalRaised: number; targetAmount: number; initialRaised: number }> => {
+    try {
+      const res = await fetch("/api/fund-contributions");
+      if (!res.ok) throw new Error("Failed to fetch contributions");
+      const data = await res.json();
+      return {
+        contributions: data.contributions || [],
+        totalRaised: data.totalRaised || 0,
+        targetAmount: data.targetAmount || 5000,
+        initialRaised: data.initialRaised || 0
+      };
+    } catch (e) {
+      console.warn("Failed to fetch fund contributions, returning fallback:", e);
+      return { contributions: [], totalRaised: 0, targetAmount: 5000, initialRaised: 0 };
+    }
+  },
+
+  addFundContribution: async (contribution: { guestName: string; amount: number; paymentMethod: 'venmo' | 'zelle' | 'cash'; note?: string }): Promise<FundContribution> => {
+    const res = await fetch("/api/fund-contributions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(contribution)
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || "Failed to submit contribution");
+    }
+    return data.contribution;
+  },
+
+  updateFundContribution: async (id: string, updates: Partial<FundContribution>): Promise<void> => {
+    const passcode = typeof window !== "undefined" ? sessionStorage.getItem("wedding_admin_passcode") || "" : "";
+    const res = await fetch("/api/fund-contributions", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-passcode": passcode
+      },
+      body: JSON.stringify({ id, ...updates })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || "Failed to update contribution");
+    }
+  },
+
+  deleteFundContribution: async (id: string): Promise<void> => {
+    const passcode = typeof window !== "undefined" ? sessionStorage.getItem("wedding_admin_passcode") || "" : "";
+    const res = await fetch("/api/fund-contributions", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-passcode": passcode
+      },
+      body: JSON.stringify({ id })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || "Failed to delete contribution");
     }
   },
 

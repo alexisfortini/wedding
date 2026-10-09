@@ -1,0 +1,16 @@
+{
+  "list": [
+    {
+      "key": "fish",
+      "label": "Seared Sea Bass"
+    },
+    {
+      "key": "chicken",
+      "label": "Braised Chicken"
+    },
+    {
+      "key": "veg",
+      "label": "Roasted King Oyster Mushroom (V/GF)"
+    }
+  ]
+}

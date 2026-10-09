@@ -15,8 +15,8 @@ export async function GET(req: Request) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error("Supabase credentials missing from environment.");
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes("placeholder")) {
+      return NextResponse.json({ success: true, value: null });
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);

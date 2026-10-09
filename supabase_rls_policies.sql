@@ -46,4 +46,16 @@ CREATE POLICY "Allow public select on guest_events" ON guest_events FOR SELECT U
 CREATE POLICY "Allow public insert on guest_events" ON guest_events FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public update on guest_events" ON guest_events FOR UPDATE USING (true) WITH CHECK (true);
 
+-- 7. Fund Contributions Table
+ALTER TABLE fund_contributions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public select on fund_contributions" ON fund_contributions;
+DROP POLICY IF EXISTS "Allow public insert on fund_contributions" ON fund_contributions;
+DROP POLICY IF EXISTS "Allow public update on fund_contributions" ON fund_contributions;
+DROP POLICY IF EXISTS "Allow public delete on fund_contributions" ON fund_contributions;
+
+CREATE POLICY "Allow public select on fund_contributions" ON fund_contributions FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on fund_contributions" ON fund_contributions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on fund_contributions" ON fund_contributions FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public delete on fund_contributions" ON fund_contributions FOR DELETE USING (true);
+
 -- Note: 'site_configs' is already RLS-enabled and secure.

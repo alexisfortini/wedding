@@ -32,9 +32,13 @@ import {
   Search,
   Loader2,
   Monitor,
-  Smartphone
+  Smartphone,
+  Eye,
+  EyeOff,
+  DollarSign,
+  CheckCircle2
 } from "lucide-react";
-import { mockDatabase, Guest, Party, Group, Event, GuestGroup } from "@/lib/mockDatabase";
+import { mockDatabase, Guest, Party, Group, Event, GuestGroup, FundContribution } from "@/lib/mockDatabase";
 import adminConfigDefault from "@config/ui/admin.json";
 import generalConfigDefault from "@config/ui/general.json";
 import storyConfigDefault from "@config/ui/story.json";
@@ -90,6 +94,19 @@ export default function AdminPage() {
   const [galleryPhotos, setGalleryPhotos] = useState<string[]>([]);
   const [activeViewport, setActiveViewport] = useState<Record<string, "desktop" | "mobile">>({});
   
+  // Fund contributions state for Registry CMS
+  const [fundContributions, setFundContributions] = useState<FundContribution[]>([]);
+  const [fundTotalRaised, setFundTotalRaised] = useState<number>(0);
+  const [isLoadingFundContributions, setIsLoadingFundContributions] = useState<boolean>(false);
+  const [fundContributionFilter, setFundContributionFilter] = useState<string>("");
+  const [showAddFundContribution, setShowAddFundContribution] = useState<boolean>(false);
+  const [newFundContribution, setNewFundContribution] = useState({
+    guestName: "",
+    amount: "",
+    paymentMethod: "venmo" as "venmo" | "zelle" | "cash",
+    note: "",
+  });
+
   // Data states from mockDatabase
   const [guests, setGuests] = useState<Guest[]>([]);
   const [parties, setParties] = useState<Party[]>([]);
@@ -166,7 +183,8 @@ export default function AdminPage() {
         mockDatabase.getGuestEvents(),
         mockDatabase.getBackups()
       ]);
-      setGuests(g);
+      const uniqueGuests = Array.from(new Map((g || []).map((guest: Guest) => [guest.id, guest])).values());
+      setGuests(uniqueGuests);
       setParties(p);
       setGroups(gr);
       setEvents(e);
@@ -208,6 +226,12 @@ export default function AdminPage() {
           }
         })
         .catch(err => console.error("Failed to load gallery photos:", err));
+    }
+  }, [activeTab, activeSettingsSection]);
+
+  useEffect(() => {
+    if (activeTab === "settings" && activeSettingsSection === "registry") {
+      loadFundContributions();
     }
   }, [activeTab, activeSettingsSection]);
 
@@ -470,6 +494,147 @@ export default function AdminPage() {
       ...prev,
       stores: (prev.stores || []).filter((_: any, i: number) => i !== idx)
     }));
+  };
+
+  // Fund contribution management helpers
+  const loadFundContributions = async () => {
+    setIsLoadingFundContributions(true);
+    try {
+      const currentPasscode = sessionStorage.getItem("wedding_admin_passcode") || passcode;
+      const res = await fetch("/api/fund-contributions", {
+        headers: {
+          "x-admin-passcode": currentPasscode,
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFundContributions(data.contributions || []);
+        setFundTotalRaised(data.totalRaised || 0);
+      }
+    } catch (err) {
+      console.error("Failed to load fund contributions:", err);
+    } finally {
+      setIsLoadingFundContributions(false);
+    }
+  };
+
+  const handleToggleContributionVerified = async (item: FundContribution) => {
+    try {
+      const currentPasscode = sessionStorage.getItem("wedding_admin_passcode") || passcode;
+      const res = await fetch("/api/fund-contributions", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-passcode": currentPasscode,
+        },
+        body: JSON.stringify({
+          id: item.id,
+          isVerified: !item.isVerified,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFundContributions(prev =>
+          prev.map(c => c.id === item.id ? { ...c, isVerified: !c.isVerified } : c)
+        );
+      } else {
+        alert("Failed to update status: " + (data.error || "Unknown error"));
+      }
+    } catch (err: any) {
+      alert("Error updating contribution: " + err.message);
+    }
+  };
+
+  const handleToggleContributionPublic = async (item: FundContribution) => {
+    try {
+      const currentPasscode = sessionStorage.getItem("wedding_admin_passcode") || passcode;
+      const res = await fetch("/api/fund-contributions", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-passcode": currentPasscode,
+        },
+        body: JSON.stringify({
+          id: item.id,
+          isPublic: !item.isPublic,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFundContributions(prev =>
+          prev.map(c => c.id === item.id ? { ...c, isPublic: !c.isPublic } : c)
+        );
+        loadFundContributions();
+      } else {
+        alert("Failed to update visibility: " + (data.error || "Unknown error"));
+      }
+    } catch (err: any) {
+      alert("Error updating contribution: " + err.message);
+    }
+  };
+
+  const handleDeleteContribution = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete the contribution record from "${name}"?`)) return;
+    try {
+      const currentPasscode = sessionStorage.getItem("wedding_admin_passcode") || passcode;
+      const res = await fetch("/api/fund-contributions", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-passcode": currentPasscode,
+        },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFundContributions(prev => prev.filter(c => c.id !== id));
+        loadFundContributions();
+      } else {
+        alert("Failed to delete contribution: " + (data.error || "Unknown error"));
+      }
+    } catch (err: any) {
+      alert("Error deleting contribution: " + err.message);
+    }
+  };
+
+  const handleAddManualContribution = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFundContribution.guestName.trim() || !newFundContribution.amount) {
+      alert("Please provide both a guest name and amount.");
+      return;
+    }
+    const num = parseFloat(newFundContribution.amount);
+    if (isNaN(num) || num <= 0) {
+      alert("Please enter a valid gift amount greater than $0.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/fund-contributions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          guestName: newFundContribution.guestName.trim(),
+          amount: num,
+          paymentMethod: newFundContribution.paymentMethod,
+          note: newFundContribution.note.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAddFundContribution(false);
+        setNewFundContribution({
+          guestName: "",
+          amount: "",
+          paymentMethod: "venmo",
+          note: "",
+        });
+        loadFundContributions();
+      } else {
+        alert("Failed to record contribution: " + (data.error || "Unknown error"));
+      }
+    } catch (err: any) {
+      alert("Error adding contribution: " + err.message);
+    }
   };
 
   // Map helpers
@@ -1008,7 +1173,7 @@ export default function AdminPage() {
 
   // Helper getters
   const getPartyName = (partyId: string | null) => {
-    if (!partyId) return "No Party / Individual";
+    if (!partyId) return "Individual Guest";
     return parties.find(p => p.id === partyId)?.name || "Unknown Party";
   };
 
@@ -1551,7 +1716,7 @@ export default function AdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[8px] uppercase tracking-widest text-charcoal/40 font-semibold mb-0.5">Tag / Distance</label>
+                    <label className="block text-[8px] uppercase tracking-widest text-charcoal/40 font-semibold mb-0.5">Distance</label>
                     <input
                       type="text"
                       value={item.tag || ""}
@@ -1760,7 +1925,7 @@ export default function AdminPage() {
               />
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">Section Subtitle / Intro Description</label>
+              <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">Section Description</label>
               <input
                 type="text"
                 value={tempConfigData.description || ""}
@@ -1772,13 +1937,13 @@ export default function AdminPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             <div className="bg-white border border-sage/20 p-3 rounded-sm space-y-2">
-              <label className="block text-[9px] uppercase tracking-widest text-terracotta font-semibold">Homepage Card 1: Cash / Custom Fund Card</label>
+              <label className="block text-[9px] uppercase tracking-widest text-terracotta font-semibold">Homepage Card 1: Honeymoon Fund Card</label>
               <input
                 type="text"
                 value={fundCard.title || ""}
                 onChange={e => updateRegistryMainCard("cash_fund", "title", e.target.value)}
                 className="w-full border border-sage/25 p-1.5 text-xs outline-none rounded-sm mb-1"
-                placeholder="Honeymoon Fund / Couch Fund"
+                placeholder="Honeymoon Fund"
               />
               <input
                 type="text"
@@ -1797,13 +1962,13 @@ export default function AdminPage() {
             </div>
 
             <div className="bg-white border border-sage/20 p-3 rounded-sm space-y-2">
-              <label className="block text-[9px] uppercase tracking-widest text-terracotta font-semibold">Homepage Card 2: Gift & Item Registry Card</label>
+              <label className="block text-[9px] uppercase tracking-widest text-terracotta font-semibold">Homepage Card 2: Gift Registry Card</label>
               <input
                 type="text"
                 value={storeCard.title || ""}
                 onChange={e => updateRegistryMainCard("store", "title", e.target.value)}
                 className="w-full border border-sage/25 p-1.5 text-xs outline-none rounded-sm mb-1"
-                placeholder="Gift & Item Registry"
+                placeholder="Gift Registry"
               />
               <input
                 type="text"
@@ -1823,10 +1988,15 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Cash / Custom Fund Settings */}
+        {/* Honeymoon & Cash Fund Settings */}
         <div className="bg-cream/15 border border-sage/15 p-5 rounded-sm space-y-4">
           <div className="flex items-center justify-between border-b border-sage/15 pb-2">
-            <h3 className="text-sm font-serif font-semibold text-charcoal uppercase tracking-wider">2. Featured Cash / Custom Fund (Stripe, Venmo, or Custom)</h3>
+            <div>
+              <h3 className="text-sm font-serif font-semibold text-charcoal uppercase tracking-wider">2. Honeymoon Fund Settings (Venmo, Zelle & Goal Progress)</h3>
+              <p className="text-[11px] text-charcoal/50 mt-0.5 font-sans">
+                Configure your Venmo handle, QR code, Zelle details, fundraising goal, and baseline contributions.
+              </p>
+            </div>
             <label className="flex items-center gap-2 text-xs font-sans text-charcoal/70 cursor-pointer">
               <input
                 type="checkbox"
@@ -1846,51 +2016,144 @@ export default function AdminPage() {
                 value={cashFund.title || ""}
                 onChange={e => updateCashFundField("title", e.target.value)}
                 className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
-                placeholder="Honeymoon Fund / New Home Fund"
+                placeholder="Honeymoon Adventure Fund"
               />
             </div>
             <div>
-              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Subtitle / Category</label>
+              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Subtitle</label>
               <input
                 type="text"
                 value={cashFund.subtitle || ""}
                 onChange={e => updateCashFundField("subtitle", e.target.value)}
                 className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
-                placeholder="Honeymoon & Travel Expenses"
+                placeholder="Contribute directly toward our honeymoon adventures via Venmo or Zelle."
               />
             </div>
             <div>
-              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Badge / Tag</label>
+              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Tag</label>
               <input
                 type="text"
                 value={cashFund.tag || ""}
                 onChange={e => updateCashFundField("tag", e.target.value)}
                 className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
-                placeholder="Cash Fund"
+                placeholder="Honeymoon Fund"
               />
+            </div>
+          </div>
+
+          {/* Goal & Baseline Amounts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/70 p-3.5 border border-sage/15 rounded-sm">
+            <div>
+              <label className="block text-[9px] uppercase tracking-widest text-terracotta mb-1 font-semibold">Target Goal Amount ($ USD)</label>
+              <input
+                type="number"
+                min="0"
+                step="50"
+                value={cashFund.target_amount !== undefined ? cashFund.target_amount : 5000}
+                onChange={e => updateCashFundField("target_amount", parseFloat(e.target.value) || 0)}
+                className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-terracotta rounded-sm"
+                placeholder="5000"
+              />
+              <span className="text-[9px] text-charcoal/40 italic block mt-1">Goal amount used for the public progress percentage bar.</span>
+            </div>
+            <div>
+              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Initial Baseline Raised ($ USD)</label>
+              <input
+                type="number"
+                min="0"
+                step="50"
+                value={cashFund.initial_raised !== undefined ? cashFund.initial_raised : 0}
+                onChange={e => updateCashFundField("initial_raised", parseFloat(e.target.value) || 0)}
+                className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
+                placeholder="0"
+              />
+              <span className="text-[9px] text-charcoal/40 italic block mt-1">Starting baseline added to guest self-reported contributions.</span>
+            </div>
+          </div>
+
+          {/* Venmo Configuration */}
+          <div className="bg-white/70 p-3.5 border border-sage/15 rounded-sm space-y-3">
+            <span className="text-[10px] uppercase tracking-wider text-sage font-semibold block">Venmo Payment Configuration</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Venmo Handle (@Username)</label>
+                <input
+                  type="text"
+                  value={cashFund.venmo_handle || ""}
+                  onChange={e => updateCashFundField("venmo_handle", e.target.value)}
+                  className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm font-mono"
+                  placeholder="@Alexis-Fortini"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Venmo QR Code Image Path</label>
+                <input
+                  type="text"
+                  value={cashFund.venmo_qr_image || ""}
+                  onChange={e => updateCashFundField("venmo_qr_image", e.target.value)}
+                  className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm font-mono"
+                  placeholder="/images/venmo-qr.png"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Zelle Configuration */}
+          <div className="bg-white/70 p-3.5 border border-sage/15 rounded-sm space-y-3">
+            <span className="text-[10px] uppercase tracking-wider text-sage font-semibold block">Zelle Payment Configuration</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Zelle Recipient Name</label>
+                <input
+                  type="text"
+                  value={cashFund.zelle_recipient || ""}
+                  onChange={e => updateCashFundField("zelle_recipient", e.target.value)}
+                  className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
+                  placeholder="Alexis Fortini"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Zelle Email Address</label>
+                <input
+                  type="email"
+                  value={cashFund.zelle_email || ""}
+                  onChange={e => updateCashFundField("zelle_email", e.target.value)}
+                  className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm font-mono"
+                  placeholder="axs.fortini@gmail.com"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Zelle Phone Number</label>
+                <input
+                  type="text"
+                  value={cashFund.zelle_phone || ""}
+                  onChange={e => updateCashFundField("zelle_phone", e.target.value)}
+                  className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm font-mono"
+                  placeholder="(555) 123-4567"
+                />
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[9px] uppercase tracking-widest text-terracotta mb-1 font-semibold">Payment Link URL (Stripe, Venmo, etc.)</label>
+              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Optional Direct Payment URL</label>
               <input
                 type="url"
-                value={cashFund.payment_url || cashFund.stripe_url || ""}
+                value={cashFund.payment_url || ""}
                 onChange={e => updateCashFundField("payment_url", e.target.value)}
-                className="w-full border border-sage/35 p-2 bg-white text-xs outline-none focus:border-terracotta rounded-sm font-mono"
-                placeholder="https://donate.stripe.com/..."
+                className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm font-mono"
+                placeholder="https://venmo.com/?txn=pay&recipients=Alexis-Fortini&note=Honeymoon%20Fund"
               />
-              <span className="text-[9px] text-charcoal/40 italic block mt-1">Paste your Stripe Payment Link, Venmo, or custom donation link here.</span>
             </div>
             <div>
-              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Button Text</label>
+              <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Primary Modal Button Text</label>
               <input
                 type="text"
                 value={cashFund.button_text || ""}
                 onChange={e => updateCashFundField("button_text", e.target.value)}
-                className="w-full border border-sage/25 p-2 bg-white text-xs outline-none focus:border-sage rounded-sm"
-                placeholder="Contribute with Card / Apple Pay"
+                className="w-full border border-sage/25 p-1.5 bg-white text-xs outline-none focus:border-sage rounded-sm"
+                placeholder="Contribute via Venmo or Zelle"
               />
             </div>
           </div>
@@ -1901,8 +2164,261 @@ export default function AdminPage() {
               value={cashFund.description || ""}
               onChange={e => updateCashFundField("description", e.target.value)}
               className="w-full border border-sage/25 p-2 bg-white text-xs outline-none focus:border-sage h-16 resize-none rounded-sm"
-              placeholder="Help us make our dream honeymoon or home project unforgettable!..."
+              placeholder="Help us make our dream honeymoon adventure unforgettable!..."
             />
+          </div>
+        </div>
+
+        {/* 3. Guest Honeymoon Fund Contributions (Live Tracking & Self-Reports) */}
+        <div className="bg-cream/15 border border-sage/15 p-5 rounded-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-sage/15 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-serif font-semibold text-charcoal uppercase tracking-wider">
+                  3. Guest Honeymoon Fund Contributions
+                </h3>
+                <span className="text-xs text-charcoal/50">({fundContributions.length} entries)</span>
+              </div>
+              <p className="text-[11px] text-charcoal/50 mt-0.5 font-sans">
+                Self-reported contributions from guests via Venmo, Zelle, or cash.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={loadFundContributions}
+                disabled={isLoadingFundContributions}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 border border-sage/30 text-charcoal/70 hover:text-charcoal hover:bg-white text-[10px] rounded-sm transition-all cursor-pointer font-semibold uppercase tracking-wider"
+                title="Refresh contributions from database"
+              >
+                <RotateCcw size={11} className={isLoadingFundContributions ? "animate-spin" : ""} />
+                Refresh
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddFundContribution(!showAddFundContribution)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-sage text-white text-[10px] rounded-sm hover:bg-sage/90 transition-all cursor-pointer font-semibold uppercase tracking-wider"
+              >
+                <Plus size={11} />
+                Record Gift
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-white border border-sage/20 p-3 rounded-sm">
+              <span className="text-[9px] uppercase tracking-wider text-charcoal/50 font-semibold block">Total Raised Live</span>
+              <span className="text-lg font-serif font-bold text-terracotta">
+                ${fundTotalRaised.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-[9px] text-charcoal/40 block mt-0.5 font-sans">
+                Baseline (${(cashFund.initial_raised || 1450).toLocaleString()}) + verified gifts
+              </span>
+            </div>
+            <div className="bg-white border border-sage/20 p-3 rounded-sm">
+              <span className="text-[9px] uppercase tracking-wider text-charcoal/50 font-semibold block">Target Goal</span>
+              <span className="text-lg font-serif font-bold text-charcoal">
+                ${(cashFund.target_amount || 5000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-[9px] text-emerald-600 font-semibold block mt-0.5 font-sans">
+                {Math.min(100, Math.round((fundTotalRaised / (cashFund.target_amount || 5000)) * 100))}% of goal reached
+              </span>
+            </div>
+            <div className="bg-white border border-sage/20 p-3 rounded-sm">
+              <span className="text-[9px] uppercase tracking-wider text-charcoal/50 font-semibold block">Guest Submissions</span>
+              <span className="text-lg font-serif font-bold text-charcoal">
+                {fundContributions.length}
+              </span>
+              <span className="text-[9px] text-charcoal/40 block mt-0.5 font-sans">
+                {fundContributions.filter(c => c.isVerified).length} verified / {fundContributions.filter(c => !c.isVerified).length} pending
+              </span>
+            </div>
+          </div>
+
+          {/* Add Manual Contribution Form */}
+          {showAddFundContribution && (
+            <form onSubmit={handleAddManualContribution} className="bg-white border-2 border-sage/30 p-4 rounded-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-sage/15 pb-2">
+                <span className="text-xs font-serif font-semibold text-charcoal uppercase tracking-wider">Record Offline or Manual Gift</span>
+                <button
+                  type="button"
+                  onClick={() => setShowAddFundContribution(false)}
+                  className="text-xs text-charcoal/40 hover:text-charcoal cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[9px] uppercase tracking-widest text-charcoal/50 mb-1 font-semibold">Guest Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newFundContribution.guestName}
+                    onChange={e => setNewFundContribution({ ...newFundContribution, guestName: e.target.value })}
+                    className="w-full border border-sage/30 p-1.5 bg-cream/10 text-xs rounded-sm outline-none focus:border-sage"
+                    placeholder="e.g. Grandma Smith"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] uppercase tracking-widest text-charcoal/50 mb-1 font-semibold">Amount ($ USD) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    required
+                    value={newFundContribution.amount}
+                    onChange={e => setNewFundContribution({ ...newFundContribution, amount: e.target.value })}
+                    className="w-full border border-sage/30 p-1.5 bg-cream/10 text-xs rounded-sm outline-none focus:border-sage"
+                    placeholder="100.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] uppercase tracking-widest text-charcoal/50 mb-1 font-semibold">Payment Method</label>
+                  <select
+                    value={newFundContribution.paymentMethod}
+                    onChange={e => setNewFundContribution({ ...newFundContribution, paymentMethod: e.target.value as any })}
+                    className="w-full border border-sage/30 p-1.5 bg-cream/10 text-xs rounded-sm outline-none focus:border-sage"
+                  >
+                    <option value="venmo">Venmo</option>
+                    <option value="zelle">Zelle</option>
+                    <option value="cash">Cash or Check</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[9px] uppercase tracking-widest text-charcoal/50 mb-1 font-semibold">Note</label>
+                <input
+                  type="text"
+                  value={newFundContribution.note}
+                  onChange={e => setNewFundContribution({ ...newFundContribution, note: e.target.value })}
+                  className="w-full border border-sage/30 p-1.5 bg-cream/10 text-xs rounded-sm outline-none focus:border-sage"
+                  placeholder="Congratulations Alexis & Kelsey! Love you both!"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAddFundContribution(false)}
+                  className="px-3 py-1.5 text-xs text-charcoal/60 hover:text-charcoal cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-terracotta text-white text-xs rounded-sm hover:bg-terracotta/90 font-semibold cursor-pointer"
+                >
+                  Save Contribution
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Search Filter */}
+          <div className="relative">
+            <Search size={13} className="absolute left-2.5 top-2.5 text-charcoal/40" />
+            <input
+              type="text"
+              value={fundContributionFilter}
+              onChange={e => setFundContributionFilter(e.target.value)}
+              placeholder="Search by guest name, method, or note message..."
+              className="w-full pl-8 pr-3 py-1.5 bg-white border border-sage/25 text-xs rounded-sm outline-none focus:border-sage"
+            />
+          </div>
+
+          {/* Contributions List */}
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+            {fundContributions
+              .filter(c => {
+                if (!fundContributionFilter.trim()) return true;
+                const q = fundContributionFilter.toLowerCase();
+                return (
+                  c.guestName.toLowerCase().includes(q) ||
+                  (c.note && c.note.toLowerCase().includes(q)) ||
+                  c.paymentMethod.toLowerCase().includes(q)
+                );
+              })
+              .map((c) => (
+                <div
+                  key={c.id}
+                  className="bg-white border border-sage/20 p-3 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs hover:border-sage/40 transition-colors"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-serif font-semibold text-charcoal text-sm">{c.guestName}</span>
+                      <span className="font-sans font-bold text-terracotta text-sm">
+                        ${Number(c.amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded font-semibold tracking-wider ${
+                        c.paymentMethod === "venmo"
+                          ? "bg-sky-50 text-sky-700 border border-sky-200"
+                          : c.paymentMethod === "zelle"
+                          ? "bg-purple-50 text-purple-700 border border-purple-200"
+                          : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      }`}>
+                        {c.paymentMethod}
+                      </span>
+                    </div>
+                    {c.note && (
+                      <p className="text-xs text-charcoal/70 italic font-serif">
+                        "{c.note}"
+                      </p>
+                    )}
+                    <div className="text-[10px] text-charcoal/40 font-sans">
+                      Received {new Date(c.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Verified Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleContributionVerified(c)}
+                      className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded border transition-colors cursor-pointer font-sans ${
+                        c.isVerified
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                          : "bg-amber-50 text-amber-800 border-amber-300"
+                      }`}
+                      title={c.isVerified ? "Click to mark pending" : "Click to mark verified"}
+                    >
+                      <CheckCircle2 size={11} />
+                      {c.isVerified ? "Verified" : "Pending"}
+                    </button>
+
+                    {/* Public Visibility Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleContributionPublic(c)}
+                      className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded border transition-colors cursor-pointer font-sans ${
+                        c.isPublic !== false
+                          ? "bg-blue-50 text-blue-800 border-blue-300"
+                          : "bg-gray-100 text-gray-600 border-gray-300"
+                      }`}
+                      title={c.isPublic !== false ? "Visible in live running total & guestbook" : "Hidden from public total"}
+                    >
+                      {c.isPublic !== false ? <Eye size={11} /> : <EyeOff size={11} />}
+                      {c.isPublic !== false ? "Public" : "Hidden"}
+                    </button>
+
+                    {/* Delete Contribution */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteContribution(c.id, c.guestName)}
+                      className="p-1 text-rose-500 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                      title="Delete record"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+            {fundContributions.length === 0 && (
+              <p className="text-xs text-charcoal/40 italic py-6 text-center">
+                No guest contributions recorded yet. Contributions submitted by guests will appear here.
+              </p>
+            )}
           </div>
         </div>
 
@@ -1910,7 +2426,7 @@ export default function AdminPage() {
         <div className="bg-cream/15 border border-sage/15 p-5 rounded-sm space-y-4">
           <div className="flex items-center justify-between border-b border-sage/15 pb-2">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-serif font-semibold text-charcoal uppercase tracking-wider">3. Curated Registry Items (Direct Store Links, Photos & Prices)</h3>
+              <h3 className="text-sm font-serif font-semibold text-charcoal uppercase tracking-wider">4. Curated Registry Items (Direct Store Links, Photos & Prices)</h3>
               <span className="text-xs text-charcoal/50">({items.length} items)</span>
             </div>
             <button
@@ -1974,7 +2490,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Price / Value</label>
+                        <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Price</label>
                         <input
                           type="text"
                           value={item.price || item.suggestedAmount || ""}
@@ -1988,13 +2504,13 @@ export default function AdminPage() {
                     {/* Row 2: Store Name, Image URL */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Store / Retailer Name</label>
+                        <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Store Name</label>
                         <input
                           type="text"
                           value={item.store_name || item.store || ""}
                           onChange={e => updateRegistryItem(idx, "store_name", e.target.value)}
                           className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm"
-                          placeholder="e.g. Williams Sonoma / Target"
+                          placeholder="e.g. Williams Sonoma or Target"
                         />
                       </div>
                       <div>
@@ -2038,7 +2554,7 @@ export default function AdminPage() {
 
                     {/* Row 4: Description */}
                     <div>
-                      <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Short Description / Notes</label>
+                      <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Description</label>
                       <input
                         type="text"
                         value={item.description || ""}
@@ -2064,7 +2580,7 @@ export default function AdminPage() {
                             }}
                             className="rounded border-emerald-500 text-emerald-600 focus:ring-emerald-500"
                           />
-                          <span className="font-medium text-emerald-800">Mark as Purchased / Claimed</span>
+                          <span className="font-medium text-emerald-800">Mark as Purchased</span>
                         </label>
 
                         {item.is_purchased && (
@@ -2102,7 +2618,7 @@ export default function AdminPage() {
         <div className="bg-cream/15 border border-sage/15 p-5 rounded-sm space-y-4">
           <div className="flex items-center justify-between border-b border-sage/15 pb-2">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-serif font-semibold text-charcoal uppercase tracking-wider">4. Partner Store Registries (Complete Lists)</h3>
+              <h3 className="text-sm font-serif font-semibold text-charcoal uppercase tracking-wider">5. Partner Store Registries (Complete Lists)</h3>
               <span className="text-xs text-charcoal/50">({stores.length} stores)</span>
             </div>
             <button
@@ -2133,7 +2649,7 @@ export default function AdminPage() {
                       value={store.name || ""}
                       onChange={e => updateRegistryStore(idx, "name", e.target.value)}
                       className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm"
-                      placeholder="e.g. Williams Sonoma / Target"
+                      placeholder="e.g. Williams Sonoma or Target"
                     />
                   </div>
                   <div>
@@ -2270,7 +2786,7 @@ export default function AdminPage() {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Location / Marker Name</label>
+                    <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Location Name</label>
                     <input
                       type="text"
                       value={item.name || ""}
@@ -2478,7 +2994,7 @@ export default function AdminPage() {
                           />
                         </div>
                         <div className="flex-1">
-                          <label className="block text-[7px] uppercase tracking-widest text-charcoal/30 font-bold mb-0.5">Artist / DJ Name</label>
+                          <label className="block text-[7px] uppercase tracking-widest text-charcoal/30 font-bold mb-0.5">Artist Name</label>
                           <input
                             type="text"
                             value={lineup.dj || ""}
@@ -3107,7 +3623,7 @@ export default function AdminPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">Household / Party</label>
+                        <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">Party</label>
                         <select
                           value={newGuestData.party_id}
                           onChange={e => {
@@ -3334,7 +3850,7 @@ export default function AdminPage() {
                       className="py-4 px-4 font-semibold cursor-pointer hover:text-sage transition-colors group whitespace-nowrap w-[150px]"
                     >
                       <div className="flex items-center gap-1">
-                        <span>Household / Party</span>
+                        <span>Party</span>
                         {renderSortIcon("party_name")}
                       </div>
                     </th>
@@ -3377,7 +3893,7 @@ export default function AdminPage() {
                     </tr>
                   ) : (
                     getSortedGuests().map((g, index) => (
-                      <tr key={g.id} className="hover:bg-cream/10 transition-colors">
+                      <tr key={`${g.id}-${index}`} className="hover:bg-cream/10 transition-colors">
                         <td className="py-4 px-4 text-center font-sans text-[11px] text-charcoal/35 select-none font-normal">
                           {index + 1}.
                         </td>

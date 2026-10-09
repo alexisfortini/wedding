@@ -1,18 +1,57 @@
 {
   "title": "The Music Lineup",
-  "subtitle": "Setting the tone under the sky. Bring your dancing shoes.",
   "events": [
     {
-      "name": "Welcome Soirée",
+      "name": "Welcome Party",
       "lineup": [
-        { "time": "7:00 PM", "dj": "DJ SAGE & SOUND" }
+        {
+          "dj": "Alexis F. (Virtual)",
+          "time": "5:00 PM"
+        },
+        {
+          "dj": "Kyle H.",
+          "time": "6:00 PM"
+        },
+        {
+          "dj": "Nick E.",
+          "time": "7:00 PM"
+        }
       ]
     },
     {
-      "name": "The Celebration",
+      "name": "The Reception",
       "lineup": [
-        { "time": "8:00 PM", "dj": "DJ HOUSE OF HEARTS" }
+        {
+          "dj": "Connor O.",
+          "time": "7:00 PM"
+        },
+        {
+          "dj": "Special Guest",
+          "time": "8:00 PM"
+        },
+        {
+          "dj": "Connor O.",
+          "time": "9:00 PM"
+        }
+      ]
+    },
+    {
+      "name": "The Afters",
+      "lineup": [
+        {
+          "dj": "Kyle C.",
+          "time": "11:00 PM"
+        },
+        {
+          "dj": "Nick E.",
+          "time": "12:00 AM"
+        },
+        {
+          "dj": "Matt C.",
+          "time": "1:00 AM"
+        }
       ]
     }
-  ]
+  ],
+  "subtitle": "Setting the tone under the desert sky. Bring your dancing shoes."
 }

@@ -26,19 +26,27 @@ Controls base variables and RSVP gating:
 * `rsvp_open_date`: Set to YYYY-MM-DD (e.g. `2027-01-01`) to lock the RSVP form until that date. Set to empty `""` to open it immediately.
 * `rsvp_deadline_message`: The deadline text rendered at the top of the RSVP forms.
 
-### 2. Registry Cash Funds (`registry.json`)
-Lists cash registries and honeymoon funds. Standard format:
+### 2. Registry & Honeymoon Fund (`registry.json`)
+Lists cash registries, Venmo/Zelle handles, and curated item stores:
 ```json
 {
-  "registry_url": "https://zola.com/registry/your-link",
-  "funds": [
-    {
-      "id": "honeymoon",
-      "title": "Honeymoon Fund",
-      "description": "Help us plan our first getaway as newlyweds.",
-      "button_text": "Contribute to Honeymoon"
-    }
-  ]
+  "title": "Gift Registry & Honeymoon Fund",
+  "description": "Your presence is the greatest gift of all...",
+  "cash_fund": {
+    "enabled": true,
+    "title": "Honeymoon Adventure Fund",
+    "subtitle": "Contribute directly toward our honeymoon adventures via Venmo or Zelle.",
+    "target_amount": 5000,
+    "initial_raised": 1450,
+    "venmo_handle": "@Alexis-Fortini",
+    "venmo_qr_image": "/images/venmo-qr.png",
+    "zelle_recipient": "Alexis Fortini",
+    "zelle_email": "axs.fortini@gmail.com",
+    "zelle_phone": "425-283-7699",
+    "payment_url": "https://venmo.com/?txn=pay&recipients=Alexis-Fortini&note=Honeymoon%20Fund"
+  },
+  "items": [],
+  "stores": []
 }
 ```
 

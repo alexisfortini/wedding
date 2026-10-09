@@ -1,14 +1,198 @@
 {
   "zoom": 10,
-  "center": [-116.42, 33.70],
+  "center": [
+    -116.42,
+    33.7
+  ],
   "locations": [
-    { "id": "venue", "name": "The Bougainvillea Estate", "lat": 33.6868, "lng": -116.2639, "type": "Venue", "icon": "Home", "color": "#D91C5C" },
-    { "id": "psp", "name": "Palm Springs Intl. Airport (PSP)", "lat": 33.8297, "lng": -116.5065, "type": "Airport", "icon": "Plane", "color": "#64748B" },
-    { "id": "laquinta", "name": "La Quinta Resort", "lat": 33.693, "lng": -116.305, "type": "Hotel", "icon": "Bed", "color": "#38BDF8" },
-    { "id": "gondola", "name": "Palm Springs Aerial Tramway", "lat": 33.8372, "lng": -116.6142, "type": "Activities", "icon": "TramFront", "color": "#8B5CF6" },
-    { "id": "artmuseum", "name": "Palm Springs Art Museum", "lat": 33.8244, "lng": -116.5492, "type": "Activities", "icon": "Palette", "color": "#8B5CF6" },
-    { "id": "moorten", "name": "Moorten Botanical Garden", "lat": 33.8048, "lng": -116.5463, "type": "Activities", "icon": "Flower", "color": "#8B5CF6" },
-    { "id": "airmuseum", "name": "Palm Springs Air Museum", "lat": 33.828, "lng": -116.495, "type": "Activities", "icon": "Plane", "color": "#8B5CF6" },
-    { "id": "pologrounds", "name": "Empire Polo Club (Coachella Grounds)", "lat": 33.680, "lng": -116.236, "type": "Activities", "icon": "Music", "color": "#8B5CF6" }
+    {
+      "id": "venue",
+      "lat": 33.6868,
+      "lng": -116.2639,
+      "icon": "Home",
+      "name": "The Bougainvillea Estate",
+      "type": "Venue",
+      "color": "#D91C5C"
+    },
+    {
+      "id": "psp",
+      "lat": 33.8297,
+      "lng": -116.5065,
+      "icon": "Plane",
+      "name": "Palm Springs Intl. Airport (PSP)",
+      "type": "Airport",
+      "color": "#64748B"
+    },
+    {
+      "id": "laquinta",
+      "lat": 33.693,
+      "lng": -116.305,
+      "icon": "Bed",
+      "name": "La Quinta Resort",
+      "type": "Hotel",
+      "color": "#38BDF8"
+    },
+    {
+      "id": "miramonte",
+      "lat": 33.7198,
+      "lng": -116.3454,
+      "icon": "Bed",
+      "name": "Tommy Bahama Miramonte",
+      "type": "Hotel",
+      "color": "#38BDF8"
+    },
+    {
+      "id": "grandhyatt",
+      "lat": 33.7224,
+      "lng": -116.3418,
+      "icon": "Bed",
+      "name": "Grand Hyatt Indian Wells",
+      "type": "Hotel",
+      "color": "#38BDF8"
+    },
+    {
+      "id": "esmeralda",
+      "lat": 33.72,
+      "lng": -116.34,
+      "icon": "Bed",
+      "name": "Renaissance Esmeralda",
+      "type": "Hotel",
+      "color": "#38BDF8"
+    },
+    {
+      "id": "jwmarriott",
+      "lat": 33.74,
+      "lng": -116.36,
+      "icon": "Bed",
+      "name": "JW Marriott Desert Springs",
+      "type": "Hotel",
+      "color": "#38BDF8"
+    },
+    {
+      "id": "gondola",
+      "lat": 33.8372,
+      "lng": -116.6142,
+      "icon": "TramFront",
+      "name": "Palm Springs Aerial Tramway",
+      "type": "Activities",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "artmuseum",
+      "lat": 33.8244,
+      "lng": -116.5492,
+      "icon": "Palette",
+      "name": "Palm Springs Art Museum",
+      "type": "Activities",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "moorten",
+      "lat": 33.8048,
+      "lng": -116.5463,
+      "icon": "Flower",
+      "name": "Moorten Botanical Garden",
+      "type": "Activities",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "pologrounds",
+      "lat": 33.68,
+      "lng": -116.236,
+      "icon": "Music",
+      "name": "Empire Polo Club (Coachella Grounds)",
+      "type": "Activities",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "golf_stadium",
+      "lat": 33.655,
+      "lng": -116.242,
+      "icon": "Flag",
+      "name": "PGA West - Stadium Course",
+      "type": "Golf",
+      "color": "#10B981"
+    },
+    {
+      "id": "golf_dunes",
+      "lat": 33.6815,
+      "lng": -116.3088,
+      "icon": "Flag",
+      "name": "La Quinta Resort - Dunes Course",
+      "type": "Golf",
+      "color": "#10B981"
+    },
+    {
+      "id": "golf_mountain",
+      "lat": 33.6815,
+      "lng": -116.3088,
+      "icon": "Flag",
+      "name": "La Quinta Resort - Mountain Course",
+      "type": "Golf",
+      "color": "#10B981"
+    },
+    {
+      "id": "golf_nicklaus",
+      "lat": 33.665,
+      "lng": -116.257,
+      "icon": "Flag",
+      "name": "PGA West - Nicklaus Tournament Course",
+      "type": "Golf",
+      "color": "#10B981"
+    },
+    {
+      "id": "golf_norman",
+      "lat": 33.667,
+      "lng": -116.248,
+      "icon": "Flag",
+      "name": "PGA West - Greg Norman Course",
+      "type": "Golf",
+      "color": "#10B981"
+    },
+    {
+      "id": "rest_workshop",
+      "lat": 33.8342,
+      "lng": -116.5465,
+      "icon": "Utensils",
+      "name": "Workshop Kitchen + Bar",
+      "type": "Restaurant",
+      "color": "#EF4444"
+    },
+    {
+      "id": "rest_copleys",
+      "lat": 33.8314,
+      "lng": -116.5464,
+      "icon": "Utensils",
+      "name": "Copley's on Palm Canyon",
+      "type": "Restaurant",
+      "color": "#EF4444"
+    },
+    {
+      "id": "rest_pink_cabana",
+      "lat": 33.7258,
+      "lng": -116.3155,
+      "icon": "Utensils",
+      "name": "The Pink Cabana",
+      "type": "Restaurant",
+      "color": "#EF4444"
+    },
+    {
+      "id": "rest_lavender",
+      "lat": 33.6845,
+      "lng": -116.2974,
+      "icon": "Utensils",
+      "name": "Lavender Bistro",
+      "type": "Restaurant",
+      "color": "#EF4444"
+    },
+    {
+      "id": "rest_tkb",
+      "lat": 33.7144,
+      "lng": -116.2365,
+      "icon": "Utensils",
+      "name": "TKB Bakery & Deli",
+      "type": "Restaurant",
+      "color": "#EF4444"
+    }
   ]
 }

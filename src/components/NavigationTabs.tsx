@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 
 const tabs = [
   { id: "our-story", label: "Story" },
@@ -14,13 +13,9 @@ const tabs = [
 
 export default function NavigationTabs() {
   const [activeId, setActiveId] = useState("");
-  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      // Show tabs after scrolling past hero (approx 80vh)
-      setIsVisible(window.scrollY > window.innerHeight * 0.8);
-
       // Find active section
       const sections = tabs.map(tab => document.getElementById(tab.id));
       const scrollPosition = window.scrollY + window.innerHeight / 3; 
@@ -34,7 +29,8 @@ export default function NavigationTabs() {
       }
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -55,10 +51,7 @@ export default function NavigationTabs() {
   };
 
   return (
-    <motion.nav
-      initial={{ y: -100, opacity: 0 }}
-      animate={{ y: isVisible ? 0 : -100, opacity: isVisible ? 1 : 0 }}
-      transition={{ duration: 0.3 }}
+    <nav
       className="fixed top-0 left-0 right-0 z-50 bg-cream/90 backdrop-blur-md border-b border-olive/10 shadow-sm"
     >
       <div className="max-w-4xl mx-auto px-4 overflow-x-auto">
@@ -67,7 +60,7 @@ export default function NavigationTabs() {
             <li key={tab.id}>
               <button
                 onClick={() => scrollTo(tab.id)}
-                className={`font-sans text-[10px] uppercase tracking-[0.2em] transition-colors ${
+                className={`font-sans text-[10px] uppercase tracking-[0.2em] transition-colors cursor-pointer ${
                   activeId === tab.id
                     ? "text-terracotta font-semibold"
                     : "text-charcoal/60 hover:text-olive"
@@ -79,6 +72,6 @@ export default function NavigationTabs() {
           ))}
         </ul>
       </div>
-    </motion.nav>
+    </nav>
   );
 }

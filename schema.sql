@@ -237,3 +237,24 @@ VALUES
   ('f6a7b8c9-0123-45ab-cdef-6789abcdef01', '00000000-0000-0000-0000-000000000002'),
   ('f6a7b8c9-0123-45ab-cdef-6789abcdef01', '00000000-0000-0000-0000-000000000003')
 ON CONFLICT DO NOTHING;
+
+-- 7. Fund Contributions table (Honeymoon Fund Venmo/Zelle self-reporting)
+CREATE TABLE IF NOT EXISTS fund_contributions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  guest_name VARCHAR(255) NOT NULL,
+  amount NUMERIC(10, 2) NOT NULL,
+  payment_method VARCHAR(50) NOT NULL DEFAULT 'venmo', -- 'venmo', 'zelle', 'cash'
+  note TEXT,
+  is_verified BOOLEAN DEFAULT true,
+  is_public BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Seed initial honeymoon fund contributions if empty
+INSERT INTO fund_contributions (id, guest_name, amount, payment_method, note, is_verified, is_public)
+VALUES
+  ('c1111111-1111-1111-1111-111111111111', 'Aunt Sarah & Uncle Dave', 250.00, 'venmo', 'So excited to celebrate with you both! Have an amazing honeymoon adventure!', true, true),
+  ('c2222222-2222-2222-2222-222222222222', 'The Miller Family', 150.00, 'zelle', 'Wishing you a lifetime of happiness, laughter, and sunsets together.', true, true),
+  ('c3333333-3333-3333-3333-333333333333', 'Jordan & Taylor', 100.00, 'venmo', 'Drinks on us in paradise! Can''t wait for Indio!', true, true)
+ON CONFLICT DO NOTHING;
+
