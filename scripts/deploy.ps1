@@ -25,6 +25,30 @@ if (Test-Path $NodejsBin) {
     }
 }
 
+# Ensure CLOUDSDK_PYTHON is configured for gcloud CLI
+if (-not $env:CLOUDSDK_PYTHON) {
+    $PotentialPython = @(
+        "$env:APPDATA\uv\python\cpython-3.14-windows-x86_64-none\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe"
+    )
+    foreach ($p in $PotentialPython) {
+        if (Test-Path $p) {
+            $env:CLOUDSDK_PYTHON = $p
+            break
+        }
+    }
+    if (-not $env:CLOUDSDK_PYTHON) {
+        $uvExe = "$env:USERPROFILE\.local\bin\uv.exe"
+        if (Test-Path $uvExe) {
+            $foundPython = & $uvExe python find 2>$null
+            if ($foundPython -and (Test-Path $foundPython)) {
+                $env:CLOUDSDK_PYTHON = $foundPython.Trim()
+            }
+        }
+    }
+}
+
 # Verify gcloud is installed and available
 if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
     Write-Error "gcloud CLI not found in PATH. Please install Google Cloud SDK or run 'gcloud' in your environment."
