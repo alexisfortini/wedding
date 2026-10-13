@@ -113,9 +113,11 @@ Set-Content -Path $EnvProdFile -Value $EnvProdContent -Encoding UTF8
 
 Write-Host "1. Setting Google Cloud active project to: $ProjectId..." -ForegroundColor Green
 & gcloud config set project $ProjectId
+if ($LASTEXITCODE -ne 0) { throw "Unable to select the Google Cloud project." }
 
 Write-Host "2. Enabling required Google Cloud APIs (Run, Artifact Registry, Build)..." -ForegroundColor Green
 & gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com cloudresourcemanager.googleapis.com
+if ($LASTEXITCODE -ne 0) { throw "Unable to enable the required Google Cloud services." }
 
 $BuildEnvVars = "NEXT_PUBLIC_SUPABASE_URL=$($env:NEXT_PUBLIC_SUPABASE_URL),NEXT_PUBLIC_SUPABASE_ANON_KEY=$($env:NEXT_PUBLIC_SUPABASE_ANON_KEY),NEXT_PUBLIC_MAPBOX_TOKEN=$($env:NEXT_PUBLIC_MAPBOX_TOKEN)"
 $RunEnvVars = "NEXT_PUBLIC_SUPABASE_URL=$($env:NEXT_PUBLIC_SUPABASE_URL),NEXT_PUBLIC_SUPABASE_ANON_KEY=$($env:NEXT_PUBLIC_SUPABASE_ANON_KEY),NEXT_PUBLIC_MAPBOX_TOKEN=$($env:NEXT_PUBLIC_MAPBOX_TOKEN),GEMINI_API_KEY=$($env:GEMINI_API_KEY),SUPABASE_SERVICE_ROLE_KEY=$($env:SUPABASE_SERVICE_ROLE_KEY),EXPORT_SECRET_KEY=$ExportSecret"
@@ -127,6 +129,7 @@ Write-Host "3. Deploying Next.js website to Google Cloud Run ($ServiceName in $R
     --allow-unauthenticated `
     --set-build-env-vars=$BuildEnvVars `
     --set-env-vars=$RunEnvVars
+if ($LASTEXITCODE -ne 0) { throw "Cloud Run deployment failed. The release has not completed." }
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host " Deployment successful!" -ForegroundColor Cyan

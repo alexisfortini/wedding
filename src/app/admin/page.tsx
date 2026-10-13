@@ -39,7 +39,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { mockDatabase, Guest, Party, Group, Event, GuestGroup, FundContribution } from "@/lib/mockDatabase";
-import adminConfigDefault from "@config/ui/admin.json";
+import adminConfigDefault from "@/lib/publicAdminConfig";
 import generalConfigDefault from "@config/ui/general.json";
 import storyConfigDefault from "@config/ui/story.json";
 import faqConfigDefault from "@config/ui/faq.json";
@@ -67,6 +67,7 @@ const DEFAULT_CONFIGS: Record<string, any> = {
 };
 
 export default function AdminPage() {
+  const [dataError, setDataError] = useState("");
   const [adminConfig, setAdminConfig] = useState(adminConfigDefault);
   const [guestSession, setGuestSession] = useState<Guest | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -192,6 +193,7 @@ export default function AdminPage() {
       setGuestEvents(ge);
       setBackups(b);
     } catch (err) {
+      setDataError("Current guest data could not be loaded. Please retry before editing records.");
       console.error("Failed to load admin data:", err);
     }
   };
@@ -199,11 +201,14 @@ export default function AdminPage() {
   // CMS Settings loaders, savers & nested array state helpers
   const loadSettingsConfig = async (section: string) => {
     setIsConfigLoaded(false);
+    setTempConfigData(null);
     try {
       const fallback = DEFAULT_CONFIGS[section];
-      const data = await mockDatabase.getSiteConfig(section, fallback);
+      const data = await mockDatabase.getSiteConfig(section, fallback, true);
       setTempConfigData(JSON.parse(JSON.stringify(data)));
+      setDataError("");
     } catch (err) {
+      setDataError("These settings could not be loaded. Please retry before making changes.");
       console.error(`Failed to load config for ${section}:`, err);
     } finally {
       setIsConfigLoaded(true);
@@ -793,6 +798,13 @@ export default function AdminPage() {
               // Check if passcode was already verified in this session
               const verified = sessionStorage.getItem("wedding_admin_passcode_verified");
               if (verified === "true") {
+                const response = await fetch("/api/admin-session", { method: "POST", headers: { "x-admin-passcode": sessionStorage.getItem("wedding_admin_passcode") || "" }, signal: AbortSignal.timeout(15000) });
+                if (!response.ok) {
+                  sessionStorage.removeItem("wedding_admin_passcode_verified");
+                  sessionStorage.removeItem("wedding_admin_passcode");
+                  setIsAuthenticated(false);
+                  return;
+                }
                 setIsAuthenticated(true);
                 await refreshData();
               }
@@ -815,14 +827,16 @@ export default function AdminPage() {
 
   const handleAuthenticate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passcode === adminConfig.passcode) {
+    try {
+      const res = await fetch("/api/admin-session", { method: "POST", headers: { "x-admin-passcode": passcode }, signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new Error("Incorrect passcode or admin service unavailable.");
       setIsAuthenticated(true);
       sessionStorage.setItem("wedding_admin_passcode_verified", "true");
       sessionStorage.setItem("wedding_admin_passcode", passcode);
       await refreshData();
       setPasscodeError("");
-    } else {
-      setPasscodeError("Incorrect passcode.");
+    } catch (error) {
+      setPasscodeError(error instanceof Error ? error.message : "Unable to sign in. Please try again.");
     }
   };
 
@@ -3417,6 +3431,9 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-cream text-charcoal font-sans p-4 sm:p-6 md:p-12 selection:bg-sage/20 selection:text-sage">
+      {dataError && <div role="alert" className="max-w-7xl mx-auto mb-6 p-4 border border-danger-line bg-danger-soft text-danger">
+        {dataError} <button className="ml-3 underline" onClick={() => { refreshData(); if (activeTab === "settings") loadSettingsConfig(activeSettingsSection); }}>Retry loading</button>
+      </div>}
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-center justify-between pb-8 border-b border-sage/25 mb-10 gap-4 md:gap-6">

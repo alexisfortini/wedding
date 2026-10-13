@@ -4,8 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { MapPin, Plane, Bed, Flag, Ship, Sparkles, Search, Loader2, Navigation, Utensils, TramFront, Home, RotateCcw, Compass, Palette, Flower, Music } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Plane, Bed, Flag, Ship, Search, Loader2, Navigation, Utensils, TramFront, Home, RotateCcw, Compass, Palette, Flower, Music } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 
@@ -16,6 +16,8 @@ import mapConfigDefault from "@config/ui/map.json";
 const iconMap = { MapPin, Plane, Bed, Flag, TramFront, Utensils, Home, Compass, Palette, Flower, Music };
 
 export default function MapSection() {
+  const reduceMotion = useReducedMotion();
+  const [mapError, setMapError] = useState('');
   const [config, setConfig] = useState(mapConfigDefault);
 
   useEffect(() => {
@@ -104,31 +106,35 @@ export default function MapSection() {
     }
   }, []);
 
-  const { messages, sendMessage, status, setMessages } = useChat({
+  const { messages, sendMessage, status, setMessages, error, regenerate, clearError, stop } = useChat({
     id: 'map-explorer',
     transport: new DefaultChatTransport({ api: '/api/map-chat' })
   });
   const isLoading = status === 'streaming' || status === 'submitted';
 
   const handleLocateMe = () => {
-    if (!navigator.geolocation) return;
+    setMapError('');
+    if (!navigator.geolocation) { setMapError('Your browser does not support location. Enter a starting address instead.'); return; }
     navigator.geolocation.getCurrentPosition((pos) => {
       const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       setUserLocation(coords);
-      mapRef?.flyTo({ center: [coords.lng, coords.lat], zoom: 14, duration: 2000 });
-    });
+      mapRef?.flyTo({ center: [coords.lng, coords.lat], zoom: 14, duration: reduceMotion ? 0 : 1200 });
+    }, () => setMapError('Your location is unavailable. Enter a starting address instead.'), { timeout: 10000 });
   };
 
   const handleGoHome = () => {
     const venue = baseLocations.find(l => l.id === 'venue');
     const center = venue ? [venue.lng, venue.lat] : [-116.237, 33.682];
-    mapRef?.flyTo({ center, zoom: 15, duration: 2000, pitch: 45 });
+    mapRef?.flyTo({ center, zoom: 15, duration: reduceMotion ? 0 : 1200, pitch: 45 });
   };
 
   const handleResetView = () => {
+    stop();
+    clearError();
+    setMapError('');
     // 1. Reset map viewport to original state
     const defaultCenter = config.center;
-    mapRef?.flyTo({ center: defaultCenter, zoom: config.zoom || 10, duration: 2000, pitch: 45 });
+    mapRef?.flyTo({ center: defaultCenter, zoom: config.zoom || 10, duration: reduceMotion ? 0 : 1200, pitch: 45 });
     
     // 2. Reset chatbot messages and text input
     setMessages([]);
@@ -155,7 +161,8 @@ export default function MapSection() {
 
   const handleManualSubmit = (e: any) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!input || !input.trim()) return;
+    if (isLoading || !input || !input.trim()) return;
+    clearError();
     sendMessage({ text: input });
     setInput('');
   };
@@ -164,13 +171,16 @@ export default function MapSection() {
 
   const handleGetDirections = async (dest: { lat: number, lng: number, name?: string }, customOrigin?: { lat: number, lng: number }) => {
     if (!token) return;
+    setMapError('');
+    setRouteData(null);
     setActiveDestination(dest);
     const origin = customOrigin || originLocation;
     const coordsString = `${origin.lng},${origin.lat};${dest.lng},${dest.lat}`;
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsString}?geometries=geojson&access_token=${token}`;
     
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      if (!response.ok) throw new Error('Map service unavailable');
       const data = await response.json();
       if (data.routes && data.routes.length > 0) {
         setRouteData(data.routes[0].geometry);
@@ -183,18 +193,20 @@ export default function MapSection() {
         mapRef?.fitBounds([
           [Math.min(origin.lng, dest.lng) - 0.02, Math.min(origin.lat, dest.lat) - 0.02],
           [Math.max(origin.lng, dest.lng) + 0.02, Math.max(origin.lat, dest.lat) + 0.02]
-        ], { padding, duration: 2000 });
-      }
+        ], { padding, duration: reduceMotion ? 0 : 1200 });
+      } else { setMapError('No driving route was found. Try another starting address.'); }
     } catch (err) {
-      console.error("Error fetching directions:", err);
+      setMapError('Directions are temporarily unavailable. Please try again.');
     }
   };
 
   const handleGeocodeCustomOrigin = async () => {
-    if (!customOriginInput || !token) return;
+    if (!customOriginInput.trim() || !token) return;
+    setMapError('');
     const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(customOriginInput)}.json?access_token=${token}&limit=1`;
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      if (!response.ok) throw new Error('Map service unavailable');
       const data = await response.json();
       if (data.features && data.features.length > 0) {
         const feat = data.features[0];
@@ -208,7 +220,7 @@ export default function MapSection() {
         }
       }
     } catch (err) {
-      console.error("Error geocoding custom address:", err);
+      setMapError('We could not find that address. Please try a more complete address.');
     }
   };
 
@@ -218,7 +230,6 @@ export default function MapSection() {
 
   // Parse AI tools to extract mapping data
   useEffect(() => {
-    console.log('MAP_CHAT_MESSAGES:', JSON.stringify(messages, null, 2));
     let newPins: any[] = [];
     let latestRoute: any = null;
     let latestOrigin: any = null;
@@ -337,7 +348,7 @@ export default function MapSection() {
           mapRef.fitBounds([
             [Math.min(latestOrigin.lng, latestDest.lng) - 0.02, Math.min(latestOrigin.lat, latestDest.lat) - 0.02],
             [Math.max(latestOrigin.lng, latestDest.lng) + 0.02, Math.max(latestOrigin.lat, latestDest.lat) + 0.02]
-          ], { padding, duration: 2000 });
+          ], { padding, duration: reduceMotion ? 0 : 1200 });
         }
       }
     }
@@ -355,7 +366,7 @@ export default function MapSection() {
           mapRef.flyTo({
             center: [uniquePins[0].lng, uniquePins[0].lat],
             zoom: 14,
-            duration: 2000
+            duration: reduceMotion ? 0 : 1200
           });
         } else {
           const lngs = uniquePins.map(p => p.lng);
@@ -369,7 +380,7 @@ export default function MapSection() {
           mapRef.fitBounds([
             [Math.min(...lngs) - 0.015, Math.min(...lats) - 0.015],
             [Math.max(...lngs) + 0.015, Math.max(...lats) + 0.015]
-          ], { padding, duration: 2000 });
+          ], { padding, duration: reduceMotion ? 0 : 1200 });
         }
       }
     }
@@ -378,10 +389,10 @@ export default function MapSection() {
 
   const allLocations = [...baseLocations, ...aiLocations];
 
-  if (!token) return <div className="h-[500px] flex items-center justify-center bg-gray-900 border border-gray-800 text-gray-500 font-mono">MAPBOX_TOKEN_MISSING</div>;
+  if (!token) return <div className="min-h-64 p-8 flex items-center justify-center bg-surface-muted border border-line text-muted font-sans text-center">The interactive map is temporarily unavailable. You can still use the venue and hotel links above for directions.</div>;
 
   return (
-    <div className="w-full h-[450px] sm:h-[550px] md:h-[700px] relative mt-12 mb-12 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+    <div className="w-full h-[450px] sm:h-[520px] lg:h-[600px] relative rounded-sm overflow-hidden shadow-card ring-1 ring-line">
       <Map
         ref={(ref: any) => setMapRef(ref?.getMap())}
         initialViewState={{
@@ -414,7 +425,14 @@ export default function MapSection() {
                 handleMarkerClick(loc);
               }}
             >
-              <motion.div 
+              <motion.div
+                role="button"
+                tabIndex={0}
+                aria-label={loc.name}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleMarkerClick(loc); }
+                  if (event.key === 'Escape') setSelectedLocation(null);
+                }}
                 className={`cursor-pointer relative flex flex-col items-center group ${loc.type === 'AI_Search' ? 'z-20' : 'z-10'}`}
                 whileHover={{ scale: 1.2 }}
                 animate={{ scale: isSelected ? 1.3 : 1 }}
@@ -422,12 +440,7 @@ export default function MapSection() {
                 onMouseLeave={handleMarkerLeave}
               >
                 <div 
-                  className="absolute inset-0 rounded-full blur-md opacity-40 group-hover:opacity-80 transition-opacity" 
-                  style={{ backgroundColor: loc.color }}
-                />
-                
-                <div 
-                  className="relative z-10 p-2 rounded-full backdrop-blur-md border border-black/10 shadow-lg"
+                  className="relative z-10 p-2 rounded-full border border-black/10 shadow-card"
                   style={{ 
                     backgroundColor: 'rgba(255, 255, 255, 0.85)',
                     color: loc.color 
@@ -445,8 +458,8 @@ export default function MapSection() {
         {userLocation && (
           <Marker latitude={userLocation.lat} longitude={userLocation.lng} anchor="center">
             <div className="relative flex items-center justify-center">
-              <div className="absolute w-8 h-8 bg-blue-500/20 rounded-full animate-ping" />
-              <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-xl relative z-10" />
+              <div className="absolute w-8 h-8 bg-blue-500/20 rounded-full" />
+              <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-card relative z-10" />
             </div>
           </Marker>
         )}
@@ -480,53 +493,53 @@ export default function MapSection() {
             closeButton={false}
             anchor="bottom"
             offset={30}
-            className="rounded-xl overflow-hidden futuristic-popup"
+            className="rounded-sm overflow-hidden wedding-map-popup"
             style={{ 
-              '--popup-bg': 'rgba(255, 255, 255, 0.95)',
-              '--popup-border': 'rgba(0, 0, 0, 0.05)'
+              '--popup-bg': 'var(--color-surface)',
+              '--popup-border': 'var(--color-line)'
             } as any}
           >
             <div 
               onMouseEnter={handlePopupEnter}
               onMouseLeave={handlePopupLeave}
-              className="p-3 backdrop-blur-xl bg-white/95 border border-black/5 rounded-xl shadow-2xl min-w-[180px]"
+              className="p-3 backdrop-blur-xl bg-surface/95 border border-line rounded-sm shadow-floating min-w-[180px]"
             >
               <div className="flex items-center gap-2 mb-1">
                 <selectedLocation.icon size={14} style={{ color: selectedLocation.color }} />
-                <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">
+                <p className="font-sans text-label uppercase tracking-label text-muted">
                   {selectedLocation.type === 'AI_Search' ? 'Discovered' : selectedLocation.type}
                 </p>
               </div>
-              <p className="font-sans font-medium text-slate-800 text-sm mb-3">{selectedLocation.name}</p>
+              <p className="font-sans font-medium text-charcoal text-copy mb-3">{selectedLocation.name}</p>
               
-              <div className="flex gap-1.5 pt-3 border-t border-black/5">
+              <div className="flex gap-1.5 pt-3 border-t border-line">
                 <button 
                   onClick={() => {
                     handleGetDirections({ lat: selectedLocation.lat, lng: selectedLocation.lng, name: selectedLocation.name });
                     setSelectedLocation(null);
                   }}
-                  className="flex-1 flex flex-col items-center justify-center bg-emerald-50 text-emerald-700 py-2 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200/30"
+                  className="flex-1 flex flex-col items-center justify-center bg-surface-muted text-olive py-2 rounded-sm hover:bg-sage/20 transition-colors border border-line"
                 >
                   <Navigation size={12} className="mb-0.5" />
-                  <span className="text-[8px] font-mono font-bold uppercase tracking-tighter">DIR</span>
+                  <span className="text-label font-sans font-semibold uppercase tracking-tighter">DIR</span>
                 </button>
                 <a 
                   href={`https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${selectedLocation.lat}&dropoff[longitude]=${selectedLocation.lng}&dropoff[nickname]=${encodeURIComponent(selectedLocation.name)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex flex-col items-center justify-center bg-slate-50 text-slate-800 py-2 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200/50"
+                  className="flex-1 flex flex-col items-center justify-center bg-surface-muted text-charcoal py-2 rounded-sm hover:bg-sage/20 transition-colors border border-line"
                   title="Request Uber"
                 >
-                  <span className="text-[10px] font-mono font-bold">UBER</span>
+                  <span className="text-label font-sans font-semibold">UBER</span>
                 </a>
                 <a 
                   href={`https://lyft.com/ride?id=lyft&destination[latitude]=${selectedLocation.lat}&destination[longitude]=${selectedLocation.lng}&destination[address]=${encodeURIComponent(selectedLocation.name)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex flex-col items-center justify-center bg-pink-50 text-pink-700 py-2 rounded-lg hover:bg-pink-100 transition-colors border border-pink-200/30"
+                  className="flex-1 flex flex-col items-center justify-center bg-surface-muted text-action py-2 rounded-sm hover:bg-sage/20 transition-colors border border-line"
                   title="Request Lyft"
                 >
-                  <span className="text-[10px] font-mono font-bold">LYFT</span>
+                  <span className="text-label font-sans font-semibold">LYFT</span>
                 </a>
               </div>
             </div>
@@ -535,10 +548,10 @@ export default function MapSection() {
       </Map>
       
       {/* Dynamic Glassmorphic Legend */}
-      <div className="hidden md:block absolute top-6 left-6 bg-white/80 backdrop-blur-xl p-5 border border-black/5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] max-w-[220px]">
+      <div className="hidden md:block absolute top-6 left-6 bg-surface/95 backdrop-blur-xl p-5 border border-line rounded-sm shadow-floating max-w-[220px]">
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles size={16} className="text-emerald-500" />
-          <h4 className="font-mono uppercase tracking-widest text-slate-800 font-bold text-xs">Directory</h4>
+          <MapPin size={16} className="text-olive" />
+          <h4 className="font-sans uppercase tracking-label text-charcoal font-semibold text-xs">Directory</h4>
         </div>
         
         <div className="space-y-3">
@@ -551,54 +564,49 @@ export default function MapSection() {
               { type: 'Activities', color: '#8B5CF6', label: 'Activities' },
               ...(aiLocations.length > 0 ? [{ type: 'AI_Search', color: '#F97316', label: 'Discovered' }] : [])
             ].map((cat) => (
-              <div 
+              <button type="button"
                 key={cat.type}
-                className="flex items-center space-x-3 cursor-pointer hover:bg-white/5 p-1.5 rounded-lg transition-colors group"
+                className="flex items-center space-x-3 cursor-pointer hover:bg-surface-muted p-1.5 rounded-sm transition-colors group"
                 onClick={() => {
                   const loc = allLocations.find(l => l.type === cat.type);
                   if (loc) setSelectedLocation(loc);
                 }}
               >
-                  <div className="w-3 h-3 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1)] transition-transform group-hover:scale-125" style={{ backgroundColor: cat.color }}></div>
-                  <span className="font-sans text-xs tracking-wide text-slate-600 group-hover:text-slate-900 transition-colors">{cat.label}</span>
-              </div>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }}></div>
+                  <span className="font-sans text-xs tracking-normal text-charcoal/80 group-hover:text-charcoal transition-colors">{cat.label}</span>
+              </button>
             ))}
         </div>
       </div>
 
       {/* Map Explorer AI Chatbox */}
-      <div className="absolute bottom-6 left-6 right-6 md:left-auto md:right-6 md:w-[320px] bg-white/80 backdrop-blur-2xl border border-black/5 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col">
-        <div 
-          onClick={() => {
-            if (window.innerWidth < 768) setIsChatExpanded(!isChatExpanded);
-          }}
-          className="p-4 bg-black/5 border-b border-black/5 flex items-center justify-between cursor-pointer md:cursor-default"
-        >
-          <div className="flex items-center gap-2">
-            <Search size={14} className="text-emerald-500" />
-            <h3 className="font-mono text-xs uppercase tracking-widest text-emerald-600 font-bold">
+      <div className="absolute bottom-3 left-3 right-3 sm:bottom-6 sm:left-6 sm:right-6 md:left-auto md:right-6 md:w-[320px] bg-surface/95 backdrop-blur-2xl border border-line rounded-sm shadow-floating overflow-hidden flex flex-col">
+        <div className="p-4 bg-surface-muted border-b border-line flex items-center justify-between">
+          <button type="button" aria-expanded={isChatExpanded} aria-controls="map-explorer-content" onClick={() => setIsChatExpanded(value => !value)} className="flex items-center gap-2 text-left">
+            <Search size={14} className="text-olive" />
+            <h3 className="font-sans text-xs uppercase tracking-label text-olive font-semibold text-balance">
               Map Explorer
-              {!isChatExpanded && <span className="md:hidden text-[9px] font-sans font-normal text-emerald-600/70 lowercase tracking-normal ml-2">(tap to open)</span>}
+              {!isChatExpanded && <span className="md:hidden text-label font-sans font-normal text-olive lowercase tracking-normal ml-2">(tap to open)</span>}
             </h3>
-          </div>
+          </button>
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <button 
               onClick={handleLocateMe}
-              className="p-1.5 hover:bg-white/50 rounded-lg transition-colors text-emerald-600 group"
+              className="p-1.5 hover:bg-surface-muted rounded-sm transition-colors text-olive group"
               title="Find me on map"
             >
               <Navigation size={14} className="group-hover:animate-pulse" />
             </button>
             <button 
               onClick={handleGoHome}
-              className="p-1.5 hover:bg-white/50 rounded-lg transition-colors text-emerald-600 group"
+              className="p-1.5 hover:bg-surface-muted rounded-sm transition-colors text-olive group"
               title="Return to the Estate"
             >
               <Home size={14} className="group-hover:scale-110 transition-transform" />
             </button>
             <button 
               onClick={handleResetView}
-              className="p-1.5 hover:bg-white/50 rounded-lg transition-colors text-emerald-600 group"
+              className="p-1.5 hover:bg-surface-muted rounded-sm transition-colors text-olive group"
               title="Reset view to default"
             >
               <RotateCcw size={14} className="group-hover:rotate-45 transition-transform duration-300" />
@@ -606,40 +614,42 @@ export default function MapSection() {
           </div>
         </div>
         
+        {mapError && <p role="alert" className="px-4 py-3 text-caption text-danger">{mapError}</p>}
         {isChatExpanded && (
-          <>
+          <div id="map-explorer-content">
             <div className="p-4 max-h-[150px] overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-black/10">
               {messages.filter((m: any) => m.role !== 'system').length === 0 ? (
-                <p className="font-mono text-xs leading-relaxed text-slate-500 opacity-90">
+                <p className="font-sans text-copy leading-relaxed text-muted">
                   Ask me to find anything near the desert venues.<br/>
-                  <span className="opacity-60 mt-1 block">Try: "Find tacos nearby" or "Where is a pharmacy?"</span>
+                  <span className="text-muted mt-1 block">Try: "Find tacos nearby" or "Where is a pharmacy?"</span>
                 </p>
               ) : (
                 messages.filter((m: any) => m.role !== 'system').map((m: any) => {
-                  const textContent = m.parts?.find((p: any) => p.type === 'text')?.text || m.content;
+                  const textContent = m.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') || m.content;
                   return (
-                    <div key={m.id} className={`font-mono text-[11px] leading-relaxed ${m.role === 'user' ? 'text-slate-800 text-right' : 'text-emerald-600'}`}>
-                      {textContent || (m.toolInvocations ? <span className="flex items-center gap-2 italic opacity-70"><Loader2 size={10} className="animate-spin" /> Plotting findings...</span> : '')}
+                    <div key={m.id} className={`font-sans text-sm leading-relaxed ${m.role === 'user' ? 'text-charcoal text-right' : 'text-olive'}`}>
+                      {textContent || (m.toolInvocations ? <span className="flex items-center gap-2 italic text-muted"><Loader2 size={10} className="animate-spin" /> Plotting findings...</span> : '')}
                     </div>
                   );
                 })
               )}
               {isLoading && messages[messages.length-1]?.role === 'user' && (
-                <div className="font-mono text-[11px] text-emerald-600 flex items-center gap-2">
+                <div className="font-sans text-caption text-olive flex items-center gap-2">
                   <Loader2 size={10} className="animate-spin" /> Searching the grid...
                 </div>
               )}
             </div>
 
-            <form onSubmit={handleManualSubmit} className="border-t border-black/5 bg-white p-2">
+            {error && <p role="alert" className="px-4 pb-3 text-caption text-danger">Map search couldn't connect. <button disabled={isLoading} onClick={() => { clearError(); regenerate(); }} className="underline underline-offset-4">Try again</button></p>}
+            <form onSubmit={handleManualSubmit} className="border-t border-line bg-surface p-2">
               <input 
                 value={input || ""}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Search map..." 
-                className="w-full bg-transparent text-slate-800 font-mono text-xs placeholder:text-slate-400 outline-none px-3 py-2"
+                placeholder="Search map..." aria-label="Ask Map Explorer" maxLength={2000} disabled={isLoading}
+                className="w-full bg-transparent text-charcoal font-sans text-base placeholder:text-muted outline-none px-3 py-2"
               />
             </form>
-          </>
+          </div>
         )}
       </div>
 
@@ -650,10 +660,10 @@ export default function MapSection() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="absolute top-2 md:top-6 left-2 sm:left-auto right-2 sm:right-12 md:right-16 bg-white/90 backdrop-blur-2xl border border-black/5 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] p-4 w-auto sm:w-[280px] z-10 font-sans text-xs space-y-3"
+            className="absolute top-2 md:top-6 left-2 sm:left-auto right-2 sm:right-12 md:right-16 bg-surface/95 backdrop-blur-2xl border border-line rounded-sm shadow-floating p-4 w-auto sm:w-[280px] z-10 font-sans text-xs space-y-3"
           >
-            <div className="flex items-center justify-between border-b border-black/5 pb-2">
-              <div className="flex items-center gap-1.5 text-emerald-600 font-bold uppercase tracking-wider font-mono">
+            <div className="flex items-center justify-between border-b border-line pb-2">
+              <div className="flex items-center gap-1.5 text-olive font-semibold uppercase tracking-label font-sans">
                 <Navigation size={12} />
                 <span>Directions</span>
               </div>
@@ -669,7 +679,7 @@ export default function MapSection() {
                     lng: -116.237
                   });
                 }}
-                className="text-slate-400 hover:text-slate-600 font-mono text-[9px] uppercase tracking-wider font-bold"
+                className="text-muted hover:text-charcoal/80 font-sans text-label uppercase tracking-label font-semibold"
               >
                 Clear
               </button>
@@ -677,7 +687,7 @@ export default function MapSection() {
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[9px] text-slate-400 uppercase font-mono tracking-wider font-semibold mb-1">Start Location</label>
+                <label className="block text-label text-muted uppercase font-sans tracking-label font-semibold mb-1">Start Location</label>
                 <select
                   value={originLocation.id}
                   onChange={(e) => {
@@ -703,7 +713,7 @@ export default function MapSection() {
                       }
                     }
                   }}
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs text-slate-700 bg-white focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full border border-line rounded-sm p-2 text-base text-charcoal/80 bg-surface focus:outline-none focus:border-action transition-colors"
                 >
                   <option value="venue">The Bougainvillea Estate (Venue)</option>
                   {userLocation && <option value="user">My Location</option>}
@@ -723,16 +733,16 @@ export default function MapSection() {
                   <input
                     type="text"
                     placeholder="Enter address..."
-                    value={customOriginInput}
+                    aria-label="Starting address" maxLength={300} value={customOriginInput}
                     onChange={(e) => setCustomOriginInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleGeocodeCustomOrigin();
                     }}
-                    className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 bg-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="min-w-0 flex-1 border border-line rounded-sm px-2.5 py-1.5 text-base text-charcoal/80 bg-surface placeholder:text-muted focus:outline-none focus:border-action transition-colors"
                   />
                   <button
                     onClick={handleGeocodeCustomOrigin}
-                    className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider hover:bg-emerald-700 transition-colors"
+                    className="bg-action text-cream px-3 py-1.5 rounded-sm text-label uppercase font-semibold tracking-label hover:bg-action-hover transition-colors"
                   >
                     Go
                   </button>
@@ -740,19 +750,19 @@ export default function MapSection() {
               )}
 
               <div>
-                <label className="block text-[9px] text-slate-400 uppercase font-mono tracking-wider font-semibold mb-0.5">Destination</label>
-                <div className="font-semibold text-slate-700 leading-tight">
+                <label className="block text-label text-muted uppercase font-sans tracking-label font-semibold mb-0.5">Destination</label>
+                <div className="font-semibold text-charcoal/80 leading-tight">
                   {activeDestination?.name}
                 </div>
               </div>
 
               {/* External Routing Links */}
-              <div className="flex gap-2 pt-2 border-t border-black/5">
+              <div className="flex gap-2 pt-2 border-t border-line">
                 <a
                   href={`https://www.google.com/maps/dir/?api=1&origin=${originLocation.lat},${originLocation.lng}&destination=${activeDestination?.lat},${activeDestination?.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-1 bg-blue-50 text-blue-700 py-2 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200/20 font-semibold text-[10px] tracking-wider uppercase font-mono"
+                  className="flex-1 flex items-center justify-center gap-1 bg-surface-muted text-olive py-2 rounded-sm hover:bg-sage/20 transition-colors border border-line font-semibold text-label tracking-label uppercase font-sans"
                 >
                   Google Maps
                 </a>
@@ -760,7 +770,7 @@ export default function MapSection() {
                   href={`https://maps.apple.com/?saddr=${originLocation.lat},${originLocation.lng}&daddr=${activeDestination?.lat},${activeDestination?.lng}&dirflg=d`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-1 bg-slate-100 text-slate-700 py-2 rounded-lg hover:bg-slate-200 transition-colors border border-slate-200/20 font-semibold text-[10px] tracking-wider uppercase font-mono"
+                  className="flex-1 flex items-center justify-center gap-1 bg-surface-muted text-charcoal/80 py-2 rounded-sm hover:bg-sage/20 transition-colors border border-line font-semibold text-label tracking-label uppercase font-sans"
                 >
                   Apple Maps
                 </a>
@@ -772,13 +782,13 @@ export default function MapSection() {
       
       {/* Global CSS for overriding Mapbox popup default styles */}
       <style dangerouslySetInnerHTML={{__html: `
-        .futuristic-popup .mapboxgl-popup-content {
+        .wedding-map-popup .mapboxgl-popup-content {
           background: transparent !important;
           padding: 0 !important;
           box-shadow: none !important;
         }
-        .futuristic-popup .mapboxgl-popup-tip {
-          border-top-color: rgba(255, 255, 255, 0.95) !important;
+        .wedding-map-popup .mapboxgl-popup-tip {
+          border-top-color: var(--popup-bg) !important;
           backdrop-filter: blur(10px);
         }
       `}} />

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { scrollToSection } from "@/lib/scrollToSection";
 
 const tabs = [
   { id: "our-story", label: "Story" },
@@ -34,36 +35,23 @@ export default function NavigationTabs() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollTo = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      const offset = 80;
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = element.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth"
-      });
-    }
-  };
 
   return (
     <nav
+      aria-label="Wedding sections"
       className="fixed top-0 left-0 right-0 z-50 bg-cream/90 backdrop-blur-md border-b border-olive/10 shadow-sm"
     >
       <div className="max-w-4xl mx-auto px-4 overflow-x-auto">
-        <ul className="flex items-center justify-center md:justify-center min-w-max space-x-6 py-4 mx-auto">
+        <ul className="flex items-center justify-center md:justify-center min-w-max space-x-4 md:space-x-6 py-4 mx-auto">
           {tabs.map((tab) => (
             <li key={tab.id}>
               <button
-                onClick={() => scrollTo(tab.id)}
-                className={`font-sans text-[10px] uppercase tracking-[0.2em] transition-colors cursor-pointer ${
+                onClick={() => scrollToSection(tab.id)}
+                aria-current={activeId === tab.id ? "location" : undefined}
+                className={`font-sans text-caption tracking-normal transition-colors cursor-pointer ${
                   activeId === tab.id
-                    ? "text-terracotta font-semibold"
-                    : "text-charcoal/60 hover:text-olive"
+                    ? "text-action font-semibold"
+                    : "text-muted hover:text-olive"
                 }`}
               >
                 {tab.label}

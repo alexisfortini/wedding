@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -11,39 +11,18 @@ import {
 import { mockDatabase } from "@/lib/mockDatabase";
 import defaultRegistryConfig from "@config/ui/registry.json";
 
-function AnimatedCounter({ value }: { value: number }) {
-  const [displayValue, setDisplayValue] = useState(0);
-
-  useEffect(() => {
-    let startTimestamp: number | null = null;
-    const startValue = displayValue;
-    const duration = 1200;
-
-    const step = (timestamp: number) => {
-      if (!startTimestamp) startTimestamp = timestamp;
-      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      const current = Math.floor(startValue + (value - startValue) * easeOut);
-      setDisplayValue(current);
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else {
-        setDisplayValue(value);
-      }
-    };
-
-    requestAnimationFrame(step);
-  }, [value]);
-
-  return <>{displayValue.toLocaleString()}</>;
-}
+import AnimatedCounter from "@/components/AnimatedCounter";
 
 export default function HoneymoonFundPage() {
   const [config, setConfig] = useState<any>(defaultRegistryConfig);
+  const [fundStatus, setFundStatus] = useState<string | null>("Loading gift total…");
   const [totalRaised, setTotalRaised] = useState<number>(0);
   const [targetAmount, setTargetAmount] = useState<number>(5000);
   const [activeTab, setActiveTab] = useState<"venmo" | "zelle">("venmo");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const requestRef = useRef<{ id: string; signature: string } | null>(null);
+  const [copyError, setCopyError] = useState("");
 
   // Self-report form state
   const [reportName, setReportName] = useState<string>("");
@@ -57,8 +36,9 @@ export default function HoneymoonFundPage() {
   const loadContributions = useCallback(() => {
     mockDatabase.getFundContributions().then((res) => {
       setTotalRaised(res.totalRaised || 0);
-      if (res.targetAmount) setTargetAmount(res.targetAmount);
-    });
+      setTargetAmount(res.targetAmount);
+      setFundStatus(null);
+    }).catch(() => setFundStatus("Gift total is temporarily unavailable."));
   }, []);
 
   useEffect(() => {
@@ -79,9 +59,10 @@ export default function HoneymoonFundPage() {
     }
   }, [loadContributions]);
 
-  const handleCopy = (text: string, key: string) => {
+  const handleCopy = async (text: string, key: string) => {
     if (!text) return;
-    navigator.clipboard.writeText(text);
+    try { await navigator.clipboard.writeText(text); setCopyError(""); }
+    catch { setCopyError("Copying is unavailable in this browser. Please select and copy the payment details manually."); return; }
     setCopiedKey(key);
     setTimeout(() => {
       setCopiedKey(null);
@@ -90,12 +71,13 @@ export default function HoneymoonFundPage() {
 
   const handleSubmitContribution = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingReport) return;
     if (!reportName.trim()) {
       setReportErrorMessage("Please enter your name.");
       return;
     }
-    const numAmount = parseFloat(reportAmount);
-    if (isNaN(numAmount) || numAmount <= 0) {
+    const numAmount = Number(reportAmount);
+    if (!Number.isFinite(numAmount) || numAmount < 0.01 || numAmount > 1000000) {
       setReportErrorMessage("Please enter a valid gift amount.");
       return;
     }
@@ -103,14 +85,17 @@ export default function HoneymoonFundPage() {
     setIsSubmittingReport(true);
     setReportErrorMessage(null);
     try {
+      const signature = JSON.stringify([reportName.trim(), numAmount, reportMethod, reportNote.trim()]);
+      if (requestRef.current?.signature !== signature) requestRef.current = { id: crypto.randomUUID(), signature };
       await mockDatabase.addFundContribution({
+        id: requestRef.current.id,
         guestName: reportName.trim(),
         amount: numAmount,
         paymentMethod: reportMethod,
         note: reportNote.trim() || undefined
       });
 
-      setTotalRaised((prev) => Math.round((prev + numAmount) * 100) / 100);
+      loadContributions();
       setReportSuccess(true);
     } catch (err: any) {
       setReportErrorMessage(err.message || "Failed to record contribution. Please try again.");
@@ -120,6 +105,7 @@ export default function HoneymoonFundPage() {
   };
 
   const resetReportForm = () => {
+    requestRef.current = null;
     setReportSuccess(false);
     setReportAmount("");
     setReportNote("");
@@ -145,45 +131,44 @@ export default function HoneymoonFundPage() {
         <div>
           <Link
             href="/#registry"
-            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-charcoal/60 hover:text-terracotta transition-colors mb-8 group"
+            className="inline-flex items-center gap-2 text-xs uppercase tracking-label text-muted hover:text-action transition-colors mb-8 group"
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
             <span>Back to Wedding Site</span>
           </Link>
 
           <div className="text-center max-w-2xl mx-auto space-y-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-terracotta/10 border border-terracotta/20 text-terracotta text-xs font-semibold uppercase tracking-widest">
-              <Heart size={13} className="fill-current text-terracotta" />
+            <div className="inline-flex items-center gap-2 text-action text-xs font-semibold uppercase tracking-label">
+              <Heart size={13} className="fill-current text-action" />
               <span>{cashFund.tag || "Honeymoon Fund"}</span>
             </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif text-charcoal">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif text-charcoal text-balance">
               {cashFund.title || "Honeymoon Fund"}
             </h1>
-            <p className="text-charcoal/70 font-sans text-sm md:text-base leading-relaxed">
+            <p className="text-charcoal/80 font-sans text-copy md:text-base leading-relaxed">
               {cashFund.description || "Having your presence celebrate with us is the greatest gift of all. If you would like to help us celebrate with a gift toward our honeymoon getaway, you can do so below."}
             </p>
           </div>
         </div>
 
         {/* Prominent Live Counter Display */}
-        <div className="bg-white border border-sage/20 rounded-sm p-6 sm:p-8 shadow-sm text-center max-w-xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-sans uppercase tracking-wider font-semibold mb-3">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Live Running Total</span>
+        <div className="bg-surface border border-line rounded-sm p-6 sm:p-8 shadow-card text-center max-w-xl mx-auto">
+          <div className="text-muted text-xs font-sans uppercase tracking-label font-semibold mb-3">
+            <span>Fund Total</span>
           </div>
           <div className="text-4xl sm:text-5xl font-serif text-charcoal font-medium h-12 flex items-baseline justify-center leading-none">
-            $<AnimatedCounter value={totalRaised} />
+            {fundStatus ? "—" : <>$<AnimatedCounter value={totalRaised} /></>}
           </div>
-          <div className="text-xs uppercase tracking-wider text-charcoal/50 mt-1.5">
-            Contributed So Far
+          <div className="text-xs uppercase tracking-label text-muted mt-1.5">
+            {fundStatus || "Contributed So Far"}
           </div>
 
-          <div className="mt-5 pt-5 border-t border-sage/15 max-w-md mx-auto">
-            <div className="flex justify-between text-xs text-charcoal/70 mb-1.5 font-medium">
+          <div hidden={!!fundStatus} className="mt-5 pt-5 border-t border-line max-w-md mx-auto">
+            <div className="flex justify-between text-xs text-charcoal/80 mb-1.5 font-medium">
               <span>Goal: ${(targetAmount || 5000).toLocaleString()}</span>
               <span>{progressPercent}% Funded</span>
             </div>
-            <div className="w-full h-2 bg-cream/70 rounded-full overflow-hidden border border-sage/15">
+            <div className="w-full h-2 bg-cream/70 rounded-full overflow-hidden border border-line">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
@@ -194,21 +179,23 @@ export default function HoneymoonFundPage() {
           </div>
         </div>
 
+        {copyError && <p role="alert" className="text-copy font-sans text-danger">{copyError}</p>}
+
         {/* Main Content Grid: Payment Methods on Left, Self-Report on Right */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
           
           {/* LEFT: Payment Instructions (Venmo / Zelle) */}
-          <div className="h-full bg-white border border-sage/20 rounded-sm shadow-sm overflow-hidden flex flex-col">
+          <div className="h-full bg-surface border border-line rounded-sm shadow-card overflow-hidden flex flex-col">
             
             {/* Tab Selection */}
-            <div className="bg-cream/40 border-b border-sage/15 p-1.5 flex gap-1.5 shrink-0">
+            <div className="bg-cream/40 border-b border-line p-1.5 flex gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveTab("venmo")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-sm text-xs font-sans uppercase tracking-wider transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-sm text-xs font-sans uppercase tracking-label transition-all cursor-pointer ${
                   activeTab === "venmo"
-                    ? "bg-white text-charcoal shadow-xs border border-sage/20 font-semibold"
-                    : "text-charcoal/60 hover:text-charcoal hover:bg-cream/50 font-medium"
+                    ? "bg-surface text-charcoal shadow-card border border-line font-semibold"
+                    : "text-muted hover:text-charcoal hover:bg-cream/50 font-medium"
                 }`}
               >
                 <Smartphone size={15} />
@@ -218,10 +205,10 @@ export default function HoneymoonFundPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("zelle")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-sm text-xs font-sans uppercase tracking-wider transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-sm text-xs font-sans uppercase tracking-label transition-all cursor-pointer ${
                   activeTab === "zelle"
-                    ? "bg-white text-charcoal shadow-xs border border-sage/20 font-semibold"
-                    : "text-charcoal/60 hover:text-charcoal hover:bg-cream/50 font-medium"
+                    ? "bg-surface text-charcoal shadow-card border border-line font-semibold"
+                    : "text-muted hover:text-charcoal hover:bg-cream/50 font-medium"
                 }`}
               >
                 <DollarSign size={15} />
@@ -236,47 +223,47 @@ export default function HoneymoonFundPage() {
               {activeTab === "venmo" && (
                 <div className="flex-1 flex flex-col justify-between space-y-6">
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-terracotta font-semibold block">
+                    <span className="text-label uppercase tracking-label text-action font-semibold block">
                       Option 1
                     </span>
-                    <h3 className="text-2xl font-serif text-charcoal">Venmo</h3>
-                    <p className="text-xs sm:text-sm font-sans text-charcoal/70 leading-relaxed">
+                    <h3 className="text-2xl font-serif text-charcoal text-balance">Venmo</h3>
+                    <p className="text-copy font-sans text-charcoal/80 leading-relaxed">
                       Scan the QR code with your phone camera or app, or copy our handle below.
                     </p>
                   </div>
 
                   {/* QR Code Container */}
-                  <div className="flex-1 flex flex-col items-center justify-center bg-cream/30 border border-sage/20 p-6 rounded-sm text-center w-full shadow-2xs">
-                    <div className="relative inline-block bg-white p-3 rounded-md border border-sage/20 shadow-xs mb-3">
+                  <div className="flex-1 flex flex-col items-center justify-center bg-cream/30 border border-line p-3 sm:p-6 rounded-sm text-center w-full shadow-card">
+                    <div className="relative inline-block max-w-full bg-white p-3 rounded-sm border border-line shadow-card mb-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={venmoQrImage}
                         alt="Venmo QR Code"
-                        className="w-48 h-48 sm:w-52 sm:h-52 object-contain mx-auto"
+                        className="w-48 sm:w-52 max-w-full h-auto aspect-square object-contain mx-auto"
                       />
                     </div>
-                    <div className="flex items-center justify-center gap-1.5 text-xs font-sans text-charcoal/60">
-                      <QrCode size={14} className="text-charcoal/50" />
+                    <div className="flex items-center justify-center gap-1.5 text-xs font-sans text-muted">
+                      <QrCode size={14} className="text-muted" />
                       <span>Scan with phone camera or Venmo app</span>
                     </div>
                   </div>
 
                   {/* Handle & Deep Link */}
                   <div className="space-y-3 w-full">
-                    <div className="flex items-center justify-between bg-cream/30 border border-sage/20 p-3.5 rounded-sm">
+                    <div className="flex items-center justify-between bg-cream/30 border border-line p-3.5 rounded-sm">
                       <div>
-                        <span className="block text-[9px] uppercase tracking-widest text-charcoal/50 font-semibold">Venmo Handle</span>
-                        <span className="font-mono text-sm font-bold text-charcoal">@{cleanVenmoHandle}</span>
+                        <span className="block text-label uppercase tracking-label text-muted font-semibold">Venmo Handle</span>
+                        <span className="font-sans tabular-nums text-sm font-bold text-charcoal">@{cleanVenmoHandle}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleCopy(`@${cleanVenmoHandle}`, "venmo")}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium rounded bg-white border border-sage/25 text-charcoal hover:bg-cream/40 transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium rounded-sm bg-surface border border-line text-charcoal hover:bg-cream/40 transition-colors cursor-pointer"
                       >
                         {copiedKey === "venmo" ? (
                           <>
-                            <Check size={13} className="text-emerald-600" />
-                            <span className="text-emerald-600 font-semibold">Copied!</span>
+                            <Check size={13} className="text-success" />
+                            <span className="text-success font-semibold">Copied!</span>
                           </>
                         ) : (
                           <>
@@ -291,7 +278,7 @@ export default function HoneymoonFundPage() {
                       href={venmoDeepLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full h-12 font-sans text-xs uppercase tracking-[0.2em] bg-terracotta text-cream rounded-sm hover:bg-charcoal transition-colors font-semibold shadow-sm flex items-center justify-center gap-2 group cursor-pointer"
+                      className="w-full h-12 font-sans text-xs uppercase tracking-label bg-action text-cream rounded-sm hover:bg-action-hover transition-colors font-semibold shadow-card flex items-center justify-center gap-2 group cursor-pointer"
                     >
                       <Smartphone size={15} />
                       <span>Open in Venmo App</span>
@@ -305,36 +292,36 @@ export default function HoneymoonFundPage() {
               {activeTab === "zelle" && (
                 <div className="flex-1 flex flex-col justify-between space-y-6">
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-terracotta font-semibold block">
+                    <span className="text-label uppercase tracking-label text-action font-semibold block">
                       Option 2
                     </span>
-                    <h3 className="text-2xl font-serif text-charcoal">Zelle</h3>
-                    <p className="text-xs sm:text-sm font-sans text-charcoal/70 leading-relaxed">
+                    <h3 className="text-2xl font-serif text-charcoal text-balance">Zelle</h3>
+                    <p className="text-copy font-sans text-charcoal/80 leading-relaxed">
                       Send directly with 0% transaction fees using your mobile banking app (Chase, BoA, Wells Fargo, etc.) or the Zelle app.
                     </p>
                   </div>
 
-                  <div className="flex-1 flex flex-col justify-center bg-cream/30 border border-sage/20 p-6 rounded-sm space-y-5 w-full shadow-2xs">
+                  <div className="flex-1 flex flex-col justify-center bg-cream/30 border border-line p-6 rounded-sm space-y-5 w-full shadow-card">
                     <div>
-                      <span className="block text-[9px] uppercase tracking-widest text-charcoal/50 font-semibold mb-1">Recipient Name</span>
-                      <p className="font-serif text-lg text-charcoal font-medium">{zelleRecipient || "Alexis Fortini"}</p>
+                      <span className="block text-label uppercase tracking-label text-muted font-semibold mb-1">Recipient Name</span>
+                      <p className="font-serif text-lg text-charcoal font-medium leading-relaxed">{zelleRecipient || "Alexis Fortini"}</p>
                     </div>
 
                     {zelleEmail && (
-                      <div className="pt-4 border-t border-sage/15 flex items-center justify-between gap-2">
+                      <div className="pt-4 border-t border-line flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <span className="block text-[9px] uppercase tracking-widest text-charcoal/50 font-semibold">Registered Email</span>
-                          <span className="font-mono text-xs sm:text-sm font-semibold text-charcoal truncate block">{zelleEmail}</span>
+                          <span className="block text-label uppercase tracking-label text-muted font-semibold">Registered Email</span>
+                          <span className="font-sans tabular-nums text-copy font-semibold text-charcoal truncate block">{zelleEmail}</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleCopy(zelleEmail, "zelle-email")}
-                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium rounded bg-white border border-sage/25 text-charcoal hover:bg-cream/40 transition-colors cursor-pointer"
+                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium rounded-sm bg-surface border border-line text-charcoal hover:bg-cream/40 transition-colors cursor-pointer"
                         >
                           {copiedKey === "zelle-email" ? (
                             <>
-                              <Check size={13} className="text-emerald-600" />
-                              <span className="text-emerald-600 font-semibold">Copied!</span>
+                              <Check size={13} className="text-success" />
+                              <span className="text-success font-semibold">Copied!</span>
                             </>
                           ) : (
                             <>
@@ -347,20 +334,20 @@ export default function HoneymoonFundPage() {
                     )}
 
                     {zellePhone && (
-                      <div className="pt-4 border-t border-sage/15 flex items-center justify-between gap-2">
+                      <div className="pt-4 border-t border-line flex items-center justify-between gap-2">
                         <div>
-                          <span className="block text-[9px] uppercase tracking-widest text-charcoal/50 font-semibold">Registered Phone</span>
-                          <span className="font-mono text-xs sm:text-sm font-semibold text-charcoal">{zellePhone}</span>
+                          <span className="block text-label uppercase tracking-label text-muted font-semibold">Registered Phone</span>
+                          <span className="font-sans tabular-nums text-copy font-semibold text-charcoal">{zellePhone}</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleCopy(zellePhone, "zelle-phone")}
-                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium rounded bg-white border border-sage/25 text-charcoal hover:bg-cream/40 transition-colors cursor-pointer"
+                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium rounded-sm bg-surface border border-line text-charcoal hover:bg-cream/40 transition-colors cursor-pointer"
                         >
                           {copiedKey === "zelle-phone" ? (
                             <>
-                              <Check size={13} className="text-emerald-600" />
-                              <span className="text-emerald-600 font-semibold">Copied!</span>
+                              <Check size={13} className="text-success" />
+                              <span className="text-success font-semibold">Copied!</span>
                             </>
                           ) : (
                             <>
@@ -372,7 +359,7 @@ export default function HoneymoonFundPage() {
                       </div>
                     )}
 
-                    <div className="pt-4 border-t border-sage/15 text-xs font-sans text-charcoal/70">
+                    <div className="pt-4 border-t border-line text-xs font-sans text-charcoal/80">
                       <span className="font-semibold text-charcoal">Memo / Note:</span> Honeymoon Fund
                     </div>
                   </div>
@@ -383,10 +370,10 @@ export default function HoneymoonFundPage() {
           </div>
 
           {/* RIGHT: Self-Report / Confirmation Form */}
-          <div className="h-full bg-white border border-sage/20 rounded-sm shadow-sm overflow-hidden flex flex-col">
-            <div className="bg-cream/40 border-b border-sage/15 p-1.5 flex items-center justify-center shrink-0">
-              <div className="py-2.5 px-4 text-xs font-sans uppercase tracking-wider text-charcoal font-semibold flex items-center gap-2">
-                <Heart size={14} className="text-terracotta fill-current" />
+          <div className="h-full bg-surface border border-line rounded-sm shadow-card overflow-hidden flex flex-col">
+            <div className="bg-cream/40 border-b border-line p-1.5 flex items-center justify-center shrink-0">
+              <div className="py-2.5 px-4 text-xs font-sans uppercase tracking-label text-charcoal font-semibold flex items-center gap-2">
+                <Heart size={14} className="text-action fill-current" />
                 <span>Gift Confirmation</span>
               </div>
             </div>
@@ -398,14 +385,14 @@ export default function HoneymoonFundPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="flex-1 flex flex-col items-center justify-center py-8 text-center space-y-4"
                 >
-                  <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-success-soft text-success mx-auto flex items-center justify-center">
                     <CheckCircle2 size={32} />
                   </div>
-                  <h3 className="text-2xl font-serif text-charcoal">Thank You So Much, {reportName}!</h3>
-                  <p className="text-sm font-sans text-charcoal/80 leading-relaxed max-w-sm">
-                    Your generous contribution of <span className="font-semibold text-terracotta">${reportAmount}</span> has been recorded and added to our live honeymoon counter.
+                  <h3 className="text-2xl font-serif text-charcoal text-balance">Thank You So Much, {reportName}!</h3>
+                  <p className="text-copy font-sans text-charcoal/80 leading-relaxed max-w-sm">
+                    Your generous contribution of <span className="font-semibold text-action">${reportAmount}</span> has been recorded and added to our live honeymoon counter.
                   </p>
-                  <p className="text-xs font-serif italic text-charcoal/60 max-w-sm">
+                  <p className="text-lg font-serif italic text-muted max-w-sm leading-relaxed">
                     We are so deeply grateful for your love and support, and cannot wait to celebrate together! 🌴🥂
                   </p>
 
@@ -413,13 +400,13 @@ export default function HoneymoonFundPage() {
                     <button
                       type="button"
                       onClick={resetReportForm}
-                      className="w-full h-11 bg-cream/40 border border-sage/30 text-charcoal text-xs uppercase tracking-wider font-semibold rounded-sm hover:bg-cream/70 transition-colors cursor-pointer"
+                      className="w-full h-11 bg-cream/40 border border-line text-charcoal text-xs uppercase tracking-label font-semibold rounded-sm hover:bg-cream/70 transition-colors cursor-pointer"
                     >
                       Record Another Gift
                     </button>
                     <Link
                       href="/#registry"
-                      className="w-full h-12 bg-terracotta text-cream text-xs uppercase tracking-wider font-semibold rounded-sm hover:bg-charcoal transition-colors flex items-center justify-center"
+                      className="w-full h-12 bg-action text-cream text-xs uppercase tracking-label font-semibold rounded-sm hover:bg-action-hover transition-colors flex items-center justify-center"
                     >
                       Return to Wedding Site
                     </Link>
@@ -429,17 +416,17 @@ export default function HoneymoonFundPage() {
                 <form onSubmit={handleSubmitContribution} className="flex-1 flex flex-col justify-between space-y-5">
                   <div className="space-y-5">
                     <div className="space-y-1">
-                      <span className="text-[10px] uppercase tracking-wider text-terracotta font-semibold block">
+                      <span className="text-label uppercase tracking-label text-action font-semibold block">
                         Sent Your Gift?
                       </span>
-                      <h3 className="text-2xl font-serif text-charcoal">Record Your Gift</h3>
-                      <p className="text-xs sm:text-sm font-sans text-charcoal/70 leading-relaxed">
+                      <h3 className="text-2xl font-serif text-charcoal text-balance">Record Your Gift</h3>
+                      <p className="text-copy font-sans text-charcoal/80 leading-relaxed">
                         Let us know so we can update our live counter and send our warmest thanks.
                       </p>
                     </div>
 
                     {reportErrorMessage && (
-                      <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-sm">
+                      <div className="p-3 bg-danger-soft border border-danger-line text-danger text-xs rounded-sm">
                         {reportErrorMessage}
                       </div>
                     )}
@@ -447,35 +434,37 @@ export default function HoneymoonFundPage() {
                     <div className="space-y-4">
                       {/* Guest Name */}
                       <div>
-                        <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">
-                          Your Name(s) <span className="text-terracotta">*</span>
+                        <label className="block text-label uppercase tracking-label text-muted mb-1.5 font-semibold">
+                          Your Name(s) <span className="text-action">*</span>
                         </label>
                         <input
                           type="text"
                           required
+                          aria-label="Your names" maxLength={200}
                           value={reportName}
                           onChange={(e) => setReportName(e.target.value)}
                           placeholder="e.g. Alexis & Kelsey or The Smith Family"
-                          className="w-full h-11 border border-sage/30 px-3 text-sm bg-white rounded-sm outline-none focus:border-terracotta transition-colors"
+                          className="w-full h-11 border border-line px-3 text-base bg-surface rounded-sm outline-none focus:border-action transition-colors"
                         />
                       </div>
 
                       {/* Amount */}
                       <div>
-                        <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">
-                          Contribution Amount ($) <span className="text-terracotta">*</span>
+                        <label className="block text-label uppercase tracking-label text-muted mb-1.5 font-semibold">
+                          Contribution Amount ($) <span className="text-action">*</span>
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-2.5 text-charcoal/40 font-serif text-base">$</span>
+                          <span className="absolute left-3 top-2.5 text-muted font-serif text-base">$</span>
                           <input
                             type="number"
                             required
                             min="1"
                             step="any"
+                            aria-label="Contribution amount in dollars"
                             value={reportAmount}
                             onChange={(e) => setReportAmount(e.target.value)}
                             placeholder="100"
-                            className="w-full h-11 border border-sage/30 pl-8 pr-3 text-sm bg-white rounded-sm outline-none focus:border-terracotta font-mono font-semibold"
+                            className="w-full h-11 border border-line pl-8 pr-3 text-base bg-surface rounded-sm outline-none focus:border-action font-sans tabular-nums font-semibold"
                           />
                         </div>
                         {/* Quick picks */}
@@ -485,7 +474,7 @@ export default function HoneymoonFundPage() {
                               key={preset}
                               type="button"
                               onClick={() => setReportAmount(preset)}
-                              className="text-xs font-mono py-1.5 rounded-sm bg-cream/40 border border-sage/20 hover:border-terracotta text-charcoal/80 cursor-pointer transition-colors text-center"
+                              className="text-xs font-sans tabular-nums py-1.5 rounded-sm bg-cream/40 border border-line hover:border-terracotta text-charcoal/80 cursor-pointer transition-colors text-center"
                             >
                               +${preset}
                             </button>
@@ -495,8 +484,8 @@ export default function HoneymoonFundPage() {
 
                       {/* Payment Method */}
                       <div>
-                        <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">
-                          Payment Method <span className="text-terracotta">*</span>
+                        <label className="block text-label uppercase tracking-label text-muted mb-1.5 font-semibold">
+                          Payment Method <span className="text-action">*</span>
                         </label>
                         <div className="grid grid-cols-3 gap-2">
                           {(["venmo", "zelle", "cash"] as const).map((method) => (
@@ -509,10 +498,10 @@ export default function HoneymoonFundPage() {
                                   setActiveTab(method);
                                 }
                               }}
-                              className={`h-10 px-2 text-xs uppercase tracking-wider font-semibold rounded-sm border transition-all cursor-pointer flex items-center justify-center ${
+                              className={`h-10 px-2 text-xs uppercase tracking-label font-semibold rounded-sm border transition-all cursor-pointer flex items-center justify-center ${
                                 reportMethod === method
-                                  ? "bg-terracotta text-cream border-terracotta shadow-xs"
-                                  : "bg-cream/20 text-charcoal/70 border-sage/20 hover:bg-cream/40"
+                                  ? "bg-action text-cream border-action shadow-card"
+                                  : "bg-cream/20 text-charcoal/80 border-line hover:bg-cream/40"
                               }`}
                             >
                               {method === "venmo" && "Venmo"}
@@ -525,18 +514,19 @@ export default function HoneymoonFundPage() {
 
                       {/* Note */}
                       <div>
-                        <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">
-                          Note <span className="text-charcoal/30 font-normal">(Optional)</span>
+                        <label className="block text-label uppercase tracking-label text-muted mb-1.5 font-semibold">
+                          Note <span className="text-muted font-normal">(Optional)</span>
                         </label>
                         <textarea
                           rows={3}
+                          aria-label="Note for the couple" maxLength={2000}
                           value={reportNote}
                           onChange={(e) => setReportNote(e.target.value)}
                           placeholder="Write a personal note for Alexis & Kelsey..."
-                          className="w-full border border-sage/30 p-3 text-sm bg-white rounded-sm outline-none focus:border-terracotta resize-none transition-colors"
+                          className="w-full border border-line p-3 text-base bg-surface rounded-sm outline-none focus:border-action resize-none transition-colors"
                         />
-                        <p className="text-[11px] font-sans text-charcoal/50 italic flex items-center gap-1.5 pt-1.5">
-                          <ShieldCheck size={14} className="text-emerald-700 shrink-0" />
+                        <p className="text-caption font-sans text-muted italic flex items-center gap-1.5 pt-1.5">
+                          <ShieldCheck size={14} className="text-success shrink-0" />
                           <span>Your gift amount and note are kept strictly private between you and the couple.</span>
                         </p>
                       </div>
@@ -547,7 +537,7 @@ export default function HoneymoonFundPage() {
                   <button
                     type="submit"
                     disabled={isSubmittingReport}
-                    className="w-full h-12 font-sans text-xs uppercase tracking-[0.2em] bg-terracotta text-cream rounded-sm hover:bg-charcoal transition-colors font-semibold shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                    className="w-full h-12 font-sans text-xs uppercase tracking-label bg-action text-cream rounded-sm hover:bg-action-hover transition-colors font-semibold shadow-card flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                   >
                     {isSubmittingReport ? (
                       <>
@@ -569,12 +559,12 @@ export default function HoneymoonFundPage() {
         </div>
 
         {/* Footer Alternative Link */}
-        <div className="pt-8 border-t border-sage/20 text-center">
-          <p className="text-sm font-sans text-charcoal/70">
+        <div className="pt-8 border-t border-line text-center">
+          <p className="text-copy font-sans text-charcoal/80">
             Looking for our curated home & physical gift registry?{" "}
             <Link
               href="/registry/items"
-              className="font-semibold text-terracotta hover:underline inline-flex items-center gap-1"
+              className="font-semibold text-action hover:underline inline-flex items-center gap-1"
             >
               <span>View Registry Items</span>
               <ArrowRight size={13} />

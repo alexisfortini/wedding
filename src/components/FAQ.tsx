@@ -20,15 +20,18 @@ function FAQItem({ faq, index }: { faq: { q: string, a: string }, index: number 
     >
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full text-left py-6 flex justify-between items-center group focus:outline-none"
+        aria-expanded={isOpen}
+        aria-controls={`faq-answer-${index}`}
+        id={`faq-question-${index}`}
+        className="w-full text-left py-6 flex justify-between items-center group"
       >
-        <h3 className={`text-lg font-serif transition-colors duration-300 pr-8 ${isOpen ? 'text-terracotta' : 'text-charcoal hover:text-olive'}`}>
+        <h3 className={`text-xl font-serif leading-snug transition-colors duration-300 pr-8 ${isOpen ? 'text-action' : 'text-charcoal hover:text-olive'}`}>
           {faq.q}
         </h3>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.3 }}
-          className={`transition-colors duration-300 flex-shrink-0 ${isOpen ? 'text-terracotta' : 'text-olive/50 group-hover:text-olive'}`}
+          className={`transition-colors duration-300 flex-shrink-0 ${isOpen ? 'text-action' : 'text-olive/50 group-hover:text-olive'}`}
         >
           <ChevronDown size={18} strokeWidth={1.5} />
         </motion.div>
@@ -40,9 +43,10 @@ function FAQItem({ faq, index }: { faq: { q: string, a: string }, index: number 
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
+            id={`faq-answer-${index}`} role="region" aria-labelledby={`faq-question-${index}`}
             className="overflow-hidden"
           >
-            <div className="pb-6 font-sans text-xs sm:text-sm tracking-wide text-charcoal/70 leading-relaxed pr-8 space-y-2">
+            <div className="pb-6 font-sans text-copy tracking-normal text-charcoal/80 leading-relaxed sm:pr-8 space-y-2">
               {faq.a.split('\n').map((paragraph, pIndex) => (
                 <p key={pIndex}>{paragraph}</p>
               ))}
@@ -64,25 +68,25 @@ export default function FAQ() {
   const faqs = config.list;
 
   return (
-    <section id="faq" className="py-28 bg-cream px-6 border-t border-olive/10">
+    <section id="faq" className="py-16 md:py-24 bg-cream px-6 border-t border-olive/10">
       <div className="max-w-3xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 md:mb-12"
         >
-          <span className="font-sans text-[10px] uppercase tracking-[0.25em] text-terracotta block mb-3 font-medium">FAQ</span>
-          <h2 className="text-4xl md:text-5xl font-serif text-charcoal mb-4">
+          <span className="font-sans text-label uppercase tracking-label text-action block mb-3 font-medium">FAQ</span>
+          <h2 className="text-4xl md:text-5xl font-serif text-charcoal mb-4 text-balance">
             {config.title}
           </h2>
-          <p className="text-olive font-serif italic text-base max-w-md mx-auto">
+          <p className="text-olive font-serif italic text-lg max-w-md mx-auto leading-relaxed">
             {config.subtitle}
           </p>
         </motion.div>
 
-        <div className="bg-cream/40 border border-olive/15 backdrop-blur-[2px] p-8 md:p-12 rounded-sm shadow-sm">
+        <div className="bg-surface border border-line backdrop-blur-[2px] px-5 py-4 sm:p-8 md:p-12 rounded-sm shadow-card">
           {faqs.map((faq, index) => (
             <FAQItem key={index} faq={faq} index={index} />
           ))}

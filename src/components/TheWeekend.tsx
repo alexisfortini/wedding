@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { mockDatabase } from "@/lib/mockDatabase";
-import { getResponsiveImageStyle } from "@/lib/imageHelper";
+import BackgroundPhoto from "./BackgroundPhoto";
 import weekendConfigDefault from "@config/ui/weekend.json";
 import imagesConfigDefault from "@config/ui/images.json";
-import adminConfigDefault from "@config/ui/admin.json";
+import adminConfigDefault from "@/lib/publicAdminConfig";
 
 const SoupIcon = ({ className }: { className?: string }) => (
   <svg
@@ -86,55 +86,58 @@ const EventCard = ({ event, index, total }: { event: any; index: number; total: 
       <div className="md:grid md:grid-cols-5 md:gap-8 items-start">
         {/* Left Side (Time/Date for Desktop) */}
         <div className="hidden md:block col-span-2 text-right pt-1">
-          <p className="font-serif text-olive text-2xl tracking-wide">
+          <p className="font-serif text-olive text-2xl tracking-normal leading-relaxed">
             {event.date ? new Date(event.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long" }) : "TBD"}
           </p>
-          <p className="font-sans text-[10px] tracking-[0.2em] text-charcoal/50 uppercase mt-1.5">
+          <p className="font-sans text-label tracking-label text-muted uppercase mt-1.5">
             {formatDate(event.date)}
           </p>
-          <p className="font-sans text-xs tracking-widest text-terracotta uppercase mt-2.5 font-medium">
+          <p className="font-sans text-xs tracking-label text-action uppercase mt-2.5 font-medium">
             {formatTime(event.start_time)} - {formatTime(event.end_time)}
           </p>
         </div>
 
         {/* Center Timeline Node */}
         <div className="absolute left-0 top-2.5 md:relative md:top-2 md:col-span-1 flex justify-center">
-          <div className="w-2.5 h-2.5 rounded-full bg-terracotta border border-cream ring-4 ring-terracotta/25 z-10 shadow-sm transition-transform hover:scale-125"></div>
+          <div className="w-2.5 h-2.5 rounded-full bg-terracotta ring-4 ring-cream z-10"></div>
           {index !== total - 1 && (
             <div className="absolute top-5 left-[4.5px] md:left-1/2 md:-ml-[0.5px] w-[1px] h-full bg-olive/20"></div>
           )}
         </div>
 
         {/* Right Side (Content) */}
-        <div className="col-span-2 pb-10 md:pb-14">
+        <div className={`col-span-2 ${index === total - 1 ? "" : "pb-10 md:pb-14"}`}>
           <div className="md:hidden mb-3">
-            <p className="font-serif text-olive text-xl">
+            <p className="font-serif text-olive text-xl leading-relaxed">
               {event.date ? new Date(event.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long" }) : "TBD"}
             </p>
-            <p className="font-sans text-[10px] tracking-[0.15em] text-charcoal/50 uppercase">
+            <p className="font-sans text-label tracking-label text-muted uppercase">
               {formatDate(event.date)} | {formatTime(event.start_time)}
             </p>
           </div>
           <div className="flex items-center space-x-3 mb-2">
-            <h3 className="text-2xl font-serif text-charcoal tracking-wide leading-tight">{event.title}</h3>
+            <h3 className="text-2xl font-serif text-charcoal tracking-normal leading-tight text-balance">{event.title}</h3>
             {event.title.toLowerCase().includes("soup") && (
-              <span className="text-terracotta opacity-80"><SoupIcon /></span>
+              <span className="text-action opacity-80"><SoupIcon /></span>
             )}
           </div>
-          <p className="font-sans text-sm text-charcoal/70 tracking-wide mb-4 flex items-center gap-1.5">
+          <p className="font-sans text-copy text-charcoal/80 tracking-normal mb-4 flex items-center gap-1.5">
             <MapPin size={14} className="text-olive/70 inline" />
             {event.location}
           </p>
           
           {event.dress_code && (
             event.dress_code.includes(":") ? (
-              <div className="relative inline-block" ref={tooltipRef}>
+              <div className="relative inline-block max-w-full" ref={tooltipRef}>
                 <button
+                  aria-expanded={showTooltip}
+                  aria-controls={`dress-code-${index}`}
+                  onKeyDown={e => { if (e.key === "Escape") setShowTooltip(false); }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowTooltip(!showTooltip);
                   }}
-                  className="font-sans text-[10px] uppercase tracking-[0.2em] text-olive border-b border-olive/35 pb-1 hover:text-terracotta hover:border-terracotta transition-colors outline-none cursor-pointer"
+                  className="font-sans text-label uppercase tracking-label text-olive border-b border-olive/35 pb-1 hover:text-action hover:border-terracotta transition-colors outline-none cursor-pointer"
                 >
                   Dress Code: {event.dress_code.split(":")[0]}
                 </button>
@@ -142,18 +145,19 @@ const EventCard = ({ event, index, total }: { event: any; index: number; total: 
                 <AnimatePresence>
                   {showTooltip && (
                     <motion.div
+                      id={`dress-code-${index}`} role="note"
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 5 }}
-                      className="absolute left-0 md:left-0 top-full mt-2 w-64 p-4 bg-cream border border-olive/20 shadow-md z-20 text-xs font-sans text-charcoal/80 leading-relaxed rounded-sm"
+                      className="absolute left-0 top-full mt-2 w-64 max-w-[calc(100vw-6rem)] p-4 bg-surface border border-line shadow-floating z-20 text-xs font-sans text-charcoal/80 leading-relaxed rounded-sm"
                     >
-                      {event.dress_code.split(":")[1].trim()}
+                      {event.dress_code.slice(event.dress_code.indexOf(":") + 1).trim()}
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
             ) : (
-              <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-olive pb-1">
+              <span className="font-sans text-label uppercase tracking-label text-olive pb-1">
                 Dress Code: {event.dress_code}
               </span>
             )
@@ -168,6 +172,8 @@ export default function TheWeekend({ guest }: { guest: any }) {
   const [config, setConfig] = useState(weekendConfigDefault);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   const [imagesConfig, setImagesConfig] = useState(imagesConfigDefault);
 
@@ -178,10 +184,13 @@ export default function TheWeekend({ guest }: { guest: any }) {
 
   useEffect(() => {
     const fetchEvents = async () => {
+      setLoading(true);
+      setLoadError(false);
       try {
         if (!guest) throw new Error("No guest specified");
 
-        const isAdmin = adminConfigDefault.admins.some(
+        const adminConfig = await mockDatabase.getSiteConfig("admin", adminConfigDefault);
+        const isAdmin = adminConfig.admins.some(
           (a: any) => a.first.toLowerCase().trim() === guest.first_name?.toLowerCase().trim() &&
                       a.last.toLowerCase().trim() === guest.last_name?.toLowerCase().trim()
         );
@@ -242,45 +251,8 @@ export default function TheWeekend({ guest }: { guest: any }) {
         });
 
         setEvents(sorted);
-      } catch (err) {
-        console.warn("Falling back to local mockDatabase for events:", err);
-        // Fallback to local mockDatabase
-        try {
-          const localEvents = await mockDatabase.getEvents();
-          const localGuests = await mockDatabase.getGuests();
-          
-          // Find matching guest in local DB
-          const matchedGuest = localGuests.find(
-            g => g.first_name.toLowerCase().trim() === guest?.first_name?.toLowerCase().trim() &&
-                 g.last_name.toLowerCase().trim() === guest?.last_name?.toLowerCase().trim()
-          ) || guest;
-
-          const targetGuestId = matchedGuest?.id || guest?.id;
-          const localGG = await mockDatabase.getGuestGroups();
-          const myGuestGroups = localGG
-            .filter(gg => gg.guest_id === targetGuestId)
-            .map(gg => gg.group_id);
-
-          const isAdmin = adminConfigDefault.admins.some(
-            (a: any) => a.first.toLowerCase().trim() === guest?.first_name?.toLowerCase().trim() &&
-                        a.last.toLowerCase().trim() === guest?.last_name?.toLowerCase().trim()
-          );
-
-          const visibleEvents = localEvents.filter(e => 
-            e.is_public || isAdmin || (e.group_id && myGuestGroups.includes(e.group_id))
-          );
-
-          // Sort by date/time
-          const sorted = visibleEvents.sort((a, b) => {
-            if (!a.date || !a.start_time) return 1;
-            if (!b.date || !b.start_time) return -1;
-            return new Date(`${a.date}T${a.start_time}`).getTime() - new Date(`${b.date}T${b.start_time}`).getTime();
-          });
-
-          setEvents(sorted);
-        } catch (innerErr) {
-          console.error("Failed to fetch events from mockDatabase:", innerErr);
-        }
+      } catch {
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -289,7 +261,7 @@ export default function TheWeekend({ guest }: { guest: any }) {
     if (guest) {
       fetchEvents();
     }
-  }, [guest]);
+  }, [guest, retry]);
 
   if (loading) {
     return (
@@ -301,10 +273,7 @@ export default function TheWeekend({ guest }: { guest: any }) {
 
   return (
     <section id="weekend" className="relative py-16 md:py-24 px-6 overflow-hidden border-t border-olive/10" style={{ clipPath: "inset(0px)" }}>
-      <div 
-        className="responsive-bg-image fixed inset-0 bg-cover pointer-events-none bg-center"
-        style={getResponsiveImageStyle(imagesConfig, "weekend", "/photos/engagement/K%26A%20Engagement%20highlights-7.jpg")}
-      />
+      <BackgroundPhoto config={imagesConfig} slot="weekend" fallback="/photos/engagement/K%26A%20Engagement%20highlights-7.jpg" />
       <div className="absolute inset-0 bg-cream/95 pointer-events-none backdrop-blur-[2px]"></div>
       <div className="relative max-w-4xl mx-auto z-10">
         <motion.div
@@ -312,24 +281,29 @@ export default function TheWeekend({ guest }: { guest: any }) {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
           viewport={{ once: true }}
-          className="text-center mb-12 md:mb-16"
+          className="text-center mb-10 md:mb-12"
         >
-          <span className="font-sans text-[10px] uppercase tracking-[0.25em] text-terracotta block mb-3 font-medium">Itinerary</span>
-          <h2 className="text-4xl md:text-5xl font-serif text-charcoal mb-4">
+          <span className="font-sans text-label uppercase tracking-label text-action block mb-3 font-medium">Itinerary</span>
+          <h2 className="text-4xl md:text-5xl font-serif text-charcoal mb-4 text-balance">
             {config.title}
           </h2>
-          <p className="text-olive font-serif italic text-base max-w-md mx-auto">
+          <p className="text-olive font-serif italic text-lg max-w-md mx-auto leading-relaxed">
             {config.description}
           </p>
         </motion.div>
 
-        {events.length === 0 && !loading ? (
+        {loadError ? (
+          <div role="alert" className="text-center space-y-4 font-sans text-copy text-muted">
+            <p>We couldn't load the current itinerary. Please try again.</p>
+            <button onClick={() => setRetry(value => value + 1)} className="px-5 py-3 border border-line text-action rounded-sm">Retry itinerary</button>
+          </div>
+        ) : events.length === 0 && !loading ? (
           <div className="text-center py-16 border border-olive/15 bg-cream rounded-sm">
-            <p className="font-serif text-xl text-charcoal mb-2">Details Coming Soon</p>
-            <p className="font-sans text-xs uppercase tracking-widest text-charcoal/50">Check back as we draw closer to the date.</p>
+            <p className="font-serif text-xl text-charcoal mb-2 leading-relaxed">Details Coming Soon</p>
+            <p className="font-sans text-xs uppercase tracking-label text-muted">Check back as we draw closer to the date.</p>
           </div>
         ) : (
-          <div className="relative mt-12">
+          <div className="relative">
             {events.map((event, index) => (
               <EventCard key={event.id} event={event} index={index} total={events.length} />
             ))}

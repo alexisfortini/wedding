@@ -25,10 +25,10 @@ export default function OurStory() {
       id="our-story" 
       className="relative py-16 md:py-24 px-6 md:px-12 bg-cream overflow-hidden"
     >
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
         
         {/* Image Column */}
-        <div className="relative w-full aspect-[4/3] sm:aspect-[3/4] md:w-3/4 lg:w-full mx-auto">
+        <div className="relative w-full max-w-lg lg:max-w-none aspect-[4/3] lg:aspect-[3/4] mx-auto">
            <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -36,34 +36,33 @@ export default function OurStory() {
             viewport={{ once: true }}
             className="w-full h-full relative"
            >
-             <div className="w-full h-full relative overflow-hidden rounded-sm shadow-md">
+             <div className="w-full h-full relative overflow-hidden rounded-sm">
                <Image 
                  src={imagesConfig.story || "/photos/engagement/K%26A%20Engagement%20highlights-3.jpg"} 
                  alt="Alexis and Kelsey" 
                  fill
+                 sizes="(min-width: 1024px) 544px, (min-width: 640px) 512px, calc(100vw - 48px)"
                  style={getResponsiveImgStyle(imagesConfig, "story")}
                  className="responsive-img-style object-cover"
                />
              </div>
              <div className="absolute inset-0 ring-1 ring-inset ring-charcoal/5 pointer-events-none rounded-sm"></div>
-             {/* Decorative Frame */}
-             <div className="absolute -inset-4 md:-inset-6 border border-olive/30 -z-10 pointer-events-none translate-x-2 translate-y-2 rounded-sm"></div>
            </motion.div>
         </div>
 
         {/* Text/Timeline Column */}
-        <div className="relative">
+        <div className="relative w-full max-w-xl lg:max-w-none mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            className="mb-8 md:mb-12"
+            className="mb-8 md:mb-10"
           >
-            <p className="text-sm tracking-[0.3em] text-terracotta uppercase font-sans mb-4">
+            <p className="text-label tracking-label text-action uppercase font-sans mb-3">
               {config.subtitle}
             </p>
-            <h2 className="text-5xl md:text-6xl font-serif text-charcoal leading-tight">
+            <h2 className="text-4xl md:text-5xl font-serif text-charcoal leading-tight text-balance">
               {config.title}
             </h2>
           </motion.div>
@@ -81,9 +80,9 @@ export default function OurStory() {
                 {/* Dot */}
                 <div className="absolute left-[-37px] top-1.5 w-2 h-2 rounded-full bg-terracotta ring-4 ring-cream"></div>
 
-                <span className="font-sans text-xs uppercase tracking-[0.2em] text-olive block mb-2">{item.year}</span>
-                <h3 className="text-2xl font-serif text-charcoal mb-3">{item.title}</h3>
-                <p className="font-sans text-charcoal/80 leading-relaxed max-w-md">
+                <span className="font-sans text-xs uppercase tracking-label text-olive block mb-2">{item.year}</span>
+                <h3 className="text-2xl font-serif text-charcoal mb-3 text-balance">{item.title}</h3>
+                <p className="font-sans text-charcoal/80 leading-7 max-w-md">
                   {item.description}
                 </p>
               </motion.div>

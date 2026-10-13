@@ -16,7 +16,7 @@ Welcome to a premium, elegant, and highly customizable Next.js wedding invitatio
   * Instantly export guest list spreadsheets formatted for direct upload into **Aisle Planner**.
   * Back up, restore, or reset database states locally or from JSON backups.
 * **📷 Sequential Gallery Grid**: A performant engagement gallery featuring sequential cascade loading animations, auto-generated WebP thumbnails for speed, and a high-resolution interactive fullscreen lightbox viewer.
-* **⚡ Database-First with Local Fallback**: Uses live Supabase database sync (secured by Row-Level Security). If database environment variables are omitted, it falls back to an offline-first browser `localStorage` database seeded from local JSON configs, ensuring zero-config local testing.
+* **Live database records**: Guest invitations, households, schedules, and RSVPs come from Supabase. Database outages show retryable errors; browser storage only remembers the invitation identifier and never substitutes guest records.
 
 ---
 

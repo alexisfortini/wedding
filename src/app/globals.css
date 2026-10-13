@@ -8,6 +8,33 @@
   --color-sage: #8A9A86;
   --color-olive: #6B705C;
   --color-terracotta: #C86B5E;
+
+  /* Guest-facing surfaces and controls share the wedding's warm palette.
+     Keep the lighter terracotta/sage for decoration; use these deeper
+     action and status colors wherever light text needs a solid backdrop. */
+  --color-surface: #FCFAF5;
+  --color-surface-muted: #EFEBDD;
+  --color-line: #D9D7C9;
+  --color-action: #A45244;
+  --color-action-hover: #884236;
+  --color-success: #52604B;
+  --color-success-soft: #E8EDDF;
+  --color-success-line: #CDD5C3;
+  --color-danger: #963F36;
+  --color-danger-soft: #F7EAE5;
+  --color-danger-line: #DFC2B7;
+  --color-muted: #69665F;
+
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.5;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.6;
+  --text-copy: 0.9375rem;
+  --text-copy--line-height: 1.7;
+  --tracking-label: 0.08em;
+
+  --shadow-card: 0 1px 2px rgb(45 43 42 / 0.04), 0 4px 16px rgb(45 43 42 / 0.025);
+  --shadow-floating: 0 2px 6px rgb(45 43 42 / 0.05), 0 12px 32px rgb(45 43 42 / 0.12);
   
   --font-serif: var(--font-cormorant);
   --font-sans: var(--font-inter);
@@ -20,11 +47,25 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    @apply font-sans tracking-wide;
+    @apply font-sans tracking-normal;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif tracking-normal text-sage;
   }
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-action);
+    outline-offset: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .wedding-photo-background { position: absolute !important; }
 }
 
 @layer utilities {

@@ -53,9 +53,10 @@ DROP POLICY IF EXISTS "Allow public insert on fund_contributions" ON fund_contri
 DROP POLICY IF EXISTS "Allow public update on fund_contributions" ON fund_contributions;
 DROP POLICY IF EXISTS "Allow public delete on fund_contributions" ON fund_contributions;
 
-CREATE POLICY "Allow public select on fund_contributions" ON fund_contributions FOR SELECT USING (true);
-CREATE POLICY "Allow public insert on fund_contributions" ON fund_contributions FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update on fund_contributions" ON fund_contributions FOR UPDATE USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public delete on fund_contributions" ON fund_contributions FOR DELETE USING (true);
 
--- Note: 'site_configs' is already RLS-enabled and secure.
+-- Sensitive tables are accessed only by the server with its service-role key.
+REVOKE ALL ON TABLE public.fund_contributions FROM anon, authenticated;
+GRANT ALL ON TABLE public.fund_contributions TO service_role;
+ALTER TABLE public.site_configs ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.site_configs FROM anon, authenticated;
+GRANT ALL ON TABLE public.site_configs TO service_role;

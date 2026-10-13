@@ -1,20 +1,7 @@
 "use client";
 
-import guestsSeed from "@config/db/guests.json";
-import groupsSeed from "@config/db/groups.json";
-import eventsSeed from "@config/db/events.json";
-
-import adminConfig from "@config/ui/admin.json";
-import djConfig from "@config/ui/dj_lineup.json";
-import faqConfig from "@config/ui/faq.json";
-import generalConfig from "@config/ui/general.json";
-import mapConfig from "@config/ui/map.json";
-import registryConfig from "@config/ui/registry.json";
-import storyConfig from "@config/ui/story.json";
-import travelConfig from "@config/ui/travel.json";
-import weekendConfig from "@config/ui/weekend.json";
-
 import { supabase } from "./supabase";
+import { lookupGuest } from "./guestLookup";
 
 // Types matching Supabase tables
 export interface FundContribution {
@@ -83,151 +70,7 @@ export interface GuestEvent {
   dietary_restrictions: string | null;
 }
 
-// Helper to generate deterministic UUIDs
-export function getDeterministicUUID(input: string): string {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
-  }
-  const hex = [];
-  let currentSeed = Math.abs(hash);
-  for (let i = 0; i < 32; i++) {
-    currentSeed = (currentSeed * 1664525 + 1013904223) % 4294967296;
-    hex.push((Math.floor(currentSeed / 65536) % 16).toString(16));
-  }
-  const s = hex.join('');
-  return `${s.slice(0, 8)}-${s.slice(8, 12)}-4${s.slice(13, 16)}-a${s.slice(17, 20)}-${s.slice(20, 32)}`;
-}
-
-// Process Seed Data dynamically from JSON configurations
-export const DEFAULT_PARTIES: Party[] = [];
-export const DEFAULT_GUESTS: Guest[] = [];
-export const DEFAULT_GUEST_GROUPS: GuestGroup[] = [];
-
-const maleNames = new Set([
-  "Alexis", "Bryce", "Carson", "Chris", "Christian", "Conner", "Connor", "David",
-  "Dusan", "Frankie", "Garrett", "Graham", "Grant", "Herb", "Jack", "Jaime",
-  "James", "Jameson", "Jeffrey", "Joe", "Johnny", "Jordan", "Joshua", "Kerry",
-  "Kyle", "Lucas", "Luke", "Mark", "Matt", "Matthew", "Miles", "Neel", "Nicholas",
-  "Nick", "Oliver", "Pete", "Randy", "Ryan", "Scott", "Thomas", "Tim", "Tom",
-  "Zac", "Zach"
-]);
-
-const seenSeedGuestIds = new Set<string>();
-
-guestsSeed.forEach((partyInfo: any) => {
-  const isSinglePerson = partyInfo.guests && partyInfo.guests.length === 1;
-  const partyId = isSinglePerson ? null : getDeterministicUUID("party-" + partyInfo.party_name);
-  
-  if (!isSinglePerson) {
-    // Determine name based on head male or primary female guest
-    let partyName = partyInfo.party_name;
-    if (partyInfo.guests && partyInfo.guests.length > 0) {
-      if (partyInfo.party_name === "Nadia Fortini & Siri Bryant") {
-        partyName = "Fortini";
-      } else {
-        const householdGuests = partyInfo.guests.filter((g: any) => !g.is_plus_one);
-        const males = householdGuests.filter((g: any) => maleNames.has(g.first_name));
-        if (males.length > 0) {
-          partyName = males[0].last_name;
-        } else if (householdGuests.length > 0) {
-          partyName = householdGuests[0].last_name;
-        }
-      }
-    }
-
-    DEFAULT_PARTIES.push({
-      id: partyId!,
-      name: partyName
-    });
-  }
-
-  partyInfo.guests.forEach((guestInfo: any) => {
-    const guestId = getDeterministicUUID(`guest-${guestInfo.first_name}-${guestInfo.last_name}`);
-    if (!seenSeedGuestIds.has(guestId)) {
-      seenSeedGuestIds.add(guestId);
-      DEFAULT_GUESTS.push({
-        id: guestId,
-        first_name: guestInfo.first_name,
-        last_name: guestInfo.last_name,
-        email: guestInfo.email || null,
-        phone: guestInfo.phone || null,
-        party_id: partyId,
-        address: guestInfo.address || partyInfo.address || null,
-        rsvp_status: "pending",
-        notes: "",
-        is_plus_one: guestInfo.is_plus_one || false,
-        parent_guest_id: guestInfo.parent_guest_id || null,
-        plus_ones_allowed: guestInfo.plus_ones_allowed || 0,
-        age: guestInfo.age || "Adult",
-        needs_highchair: guestInfo.needs_highchair || false,
-        in_wheelchair: guestInfo.in_wheelchair || false
-      });
-    }
-
-    if (guestInfo.groups && Array.isArray(guestInfo.groups)) {
-      guestInfo.groups.forEach((groupName: string) => {
-        const groupId = getDeterministicUUID("group-" + groupName);
-        DEFAULT_GUEST_GROUPS.push({
-          guest_id: guestId,
-          group_id: groupId
-        });
-      });
-    }
-  });
-});
-
-export const DEFAULT_GROUPS: Group[] = groupsSeed.map((name: string) => ({
-  id: getDeterministicUUID("group-" + name),
-  name
-}));
-
-export const DEFAULT_EVENTS: Event[] = eventsSeed.map((eventInfo: any) => {
-  const eventId = getDeterministicUUID("event-" + eventInfo.title);
-  const groupId = eventInfo.group ? getDeterministicUUID("group-" + eventInfo.group) : null;
-  return {
-    id: eventId,
-    title: eventInfo.title,
-    description: eventInfo.description || null,
-    date: eventInfo.date,
-    start_time: eventInfo.start_time,
-    end_time: eventInfo.end_time || null,
-    location: eventInfo.location,
-    dress_code: eventInfo.dress_code || null,
-    is_public: eventInfo.is_public !== false,
-    group_id: groupId,
-    needs_rsvp: eventInfo.needs_rsvp !== false
-  };
-});
-
-export const DEFAULT_GUEST_EVENTS: GuestEvent[] = [];
-
-DEFAULT_GUESTS.forEach(g => {
-  DEFAULT_EVENTS.forEach(e => {
-    if (e.is_public) {
-      DEFAULT_GUEST_EVENTS.push({
-        guest_id: g.id,
-        event_id: e.id,
-        is_attending: null,
-        meal_choice: null,
-        dietary_restrictions: null
-      });
-    } else if (e.group_id) {
-      const isInGroup = DEFAULT_GUEST_GROUPS.some(gg => gg.guest_id === g.id && gg.group_id === e.group_id);
-      if (isInGroup) {
-        DEFAULT_GUEST_EVENTS.push({
-          guest_id: g.id,
-          event_id: e.id,
-          is_attending: null,
-          meal_choice: null,
-          dietary_restrictions: null
-        });
-      }
-    }
-  });
-});
+const configRequests = new Map<string, Promise<any>>();
 
 // Helper for secure admin write mutations to bypass RLS policies
 async function adminDbWrite(action: string, payload: any): Promise<any> {
@@ -238,7 +81,8 @@ async function adminDbWrite(action: string, payload: any): Promise<any> {
       "Content-Type": "application/json",
       "x-admin-passcode": passcode
     },
-    body: JSON.stringify({ action, payload })
+    body: JSON.stringify({ action, payload }),
+    signal: AbortSignal.timeout(30000)
   });
   const data = await res.json();
   if (!data.success) {
@@ -247,17 +91,21 @@ async function adminDbWrite(action: string, payload: any): Promise<any> {
   return data.data;
 }
 
+async function readTable<T>(table: string, columns: string[]): Promise<T[]> {
+  const rows: T[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    let query = supabase.from(table).select('*');
+    for (const column of columns) query = query.order(column);
+    const { data, error } = await query.range(offset, offset + 999);
+    if (error) throw new Error('Unable to load the current ' + table.replaceAll('_', ' ') + '. Please try again.');
+    rows.push(...(data ?? []) as T[]);
+    if (!data || data.length < 1000) return rows;
+  }
+}
+
 // Database implementation using Supabase directly as the single source of truth
 export const mockDatabase = {
-  getParties: async (): Promise<Party[]> => {
-    try {
-      const { data, error } = await supabase.from("parties").select("*").order("name");
-      if (!error && data && data.length > 0) return data;
-    } catch (e) {
-      console.warn("Supabase getParties failed, using seed fallback:", e);
-    }
-    return DEFAULT_PARTIES;
-  },
+  getParties: async (): Promise<Party[]> => readTable<Party>("parties", ["name","id"]),
   saveParty: async (party: Party): Promise<void> => {
     await adminDbWrite("saveParty", { party });
   },
@@ -265,21 +113,7 @@ export const mockDatabase = {
     await adminDbWrite("deleteParty", { id });
   },
 
-  getGuests: async (): Promise<Guest[]> => {
-    try {
-      const { data, error } = await supabase
-        .from("guests")
-        .select("*")
-        .order("last_name", { ascending: true })
-        .order("first_name", { ascending: true });
-      if (!error && data && data.length > 0) {
-        return Array.from(new Map(data.map((g: any) => [g.id, g])).values());
-      }
-    } catch (e) {
-      console.warn("Supabase getGuests failed, using seed fallback:", e);
-    }
-    return DEFAULT_GUESTS;
-  },
+  getGuests: async (): Promise<Guest[]> => readTable<Guest>("guests", ["last_name","first_name","id"]),
   saveGuest: async (guest: Guest): Promise<void> => {
     await adminDbWrite("saveGuest", { guest });
   },
@@ -287,28 +121,12 @@ export const mockDatabase = {
     await adminDbWrite("deleteGuest", { id });
   },
 
-  getGroups: async (): Promise<Group[]> => {
-    try {
-      const { data, error } = await supabase.from("groups").select("*").order("name");
-      if (!error && data && data.length > 0) return data;
-    } catch (e) {
-      console.warn("Supabase getGroups failed, using seed fallback:", e);
-    }
-    return DEFAULT_GROUPS;
-  },
+  getGroups: async (): Promise<Group[]> => readTable<Group>("groups", ["name","id"]),
   saveGroup: async (group: Group): Promise<void> => {
     await adminDbWrite("saveGroup", { group });
   },
 
-  getGuestGroups: async (): Promise<GuestGroup[]> => {
-    try {
-      const { data, error } = await supabase.from("guest_groups").select("*");
-      if (!error && data && data.length > 0) return data;
-    } catch (e) {
-      console.warn("Supabase getGuestGroups failed, using seed fallback:", e);
-    }
-    return DEFAULT_GUEST_GROUPS;
-  },
+  getGuestGroups: async (): Promise<GuestGroup[]> => readTable<GuestGroup>("guest_groups", ["guest_id","group_id"]),
   addGuestToGroup: async (guest_id: string, group_id: string): Promise<void> => {
     await adminDbWrite("addGuestToGroup", { guest_id, group_id });
   },
@@ -316,15 +134,7 @@ export const mockDatabase = {
     await adminDbWrite("removeGuestFromGroup", { guest_id, group_id });
   },
 
-  getEvents: async (): Promise<Event[]> => {
-    try {
-      const { data, error } = await supabase.from("events").select("*").order("date").order("start_time");
-      if (!error && data && data.length > 0) return data;
-    } catch (e) {
-      console.warn("Supabase getEvents failed, using seed fallback:", e);
-    }
-    return DEFAULT_EVENTS;
-  },
+  getEvents: async (): Promise<Event[]> => readTable<Event>("events", ["date","start_time","id"]),
   saveEvent: async (event: Event): Promise<void> => {
     await adminDbWrite("saveEvent", { event });
   },
@@ -332,15 +142,7 @@ export const mockDatabase = {
     await adminDbWrite("deleteEvent", { id });
   },
 
-  getGuestEvents: async (): Promise<GuestEvent[]> => {
-    try {
-      const { data, error } = await supabase.from("guest_events").select("*");
-      if (!error && data && data.length > 0) return data;
-    } catch (e) {
-      console.warn("Supabase getGuestEvents failed, using seed fallback:", e);
-    }
-    return DEFAULT_GUEST_EVENTS;
-  },
+  getGuestEvents: async (): Promise<GuestEvent[]> => readTable<GuestEvent>("guest_events", ["guest_id","event_id"]),
   linkGuestEvent: async (guest_id: string, event_id: string): Promise<void> => {
     const { error } = await supabase.from("guest_events").upsert({
       guest_id,
@@ -348,7 +150,7 @@ export const mockDatabase = {
       is_attending: null,
       meal_choice: null,
       dietary_restrictions: null
-    }, { onConflict: "guest_id,event_id" });
+    }, { onConflict: "guest_id,event_id", ignoreDuplicates: true });
     if (error) throw error;
   },
   unlinkGuestEvent: async (guest_id: string, event_id: string): Promise<void> => {
@@ -372,99 +174,13 @@ export const mockDatabase = {
     mockDatabase.createBackup(`Update RSVP (guest ID: ${guest_id})`).catch(() => {});
   },
 
-  // Lookup guest by name (Case-insensitive)
-  findGuestByName: async (firstName: string, lastName: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("guests")
-        .select(`
-          *,
-          parties (name)
-        `)
-        .ilike("first_name", firstName.trim())
-        .ilike("last_name", lastName.trim())
-        .maybeSingle();
-      if (!error && data) {
-        return {
-          ...data,
-          parties: data.parties ? { name: (data.parties as any).name } : null
-        };
-      }
-    } catch (e) {
-      console.warn("Supabase findGuestByName failed, using local DEFAULT_GUESTS:", e);
-    }
-
-    const normalize = (str: string) => 
-      (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-
-    const targetFirst = normalize(firstName);
-    const targetLast = normalize(lastName);
-
-    // Common nickname aliases map
-    const aliases: Record<string, string[]> = {
-      "frankie": ["franklin", "frank"],
-      "franklin": ["frankie", "frank"],
-      "frank": ["frankie", "franklin"],
-      "zac": ["zach", "zachary"],
-      "zach": ["zac", "zachary"],
-      "zachary": ["zac", "zach"],
-      "becky": ["rebecca", "becca"],
-      "rebecca": ["becky", "becca"],
-      "dan": ["daniel"],
-      "daniel": ["dan"],
-      "matt": ["matthew"],
-      "matthew": ["matt"],
-      "tom": ["thomas"],
-      "thomas": ["tom"],
-      "tim": ["timothy"],
-      "timothy": ["tim"],
-      "alex": ["alexis", "alexander", "alexandra"],
-      "alexis": ["alex"],
-      "sam": ["samuel", "samantha"],
-      "samuel": ["sam"],
-      "samantha": ["sam"]
-    };
-
-    const targetFirstVariants = [targetFirst, ...(aliases[targetFirst] || [])];
-
-    const found = DEFAULT_GUESTS.find(g => {
-      const gFirst = normalize(g.first_name);
-      const gLast = normalize(g.last_name);
-      return targetFirstVariants.includes(gFirst) && gLast === targetLast;
-    });
-
-    if (found) {
-      const party = DEFAULT_PARTIES.find(p => p.id === found.party_id);
-      return {
-        ...found,
-        parties: party ? { name: party.name } : null
-      };
-    }
-    return null;
-  },
+  findGuestByName: async (firstName: string, lastName: string) => lookupGuest({ firstName, lastName }),
 
   // Database backup control via Supabase site_configs table
-  getBackups: async (): Promise<any[]> => {
-    try {
-      const { data, error } = await supabase
-        .from("site_configs")
-        .select("key, value, updated_at")
-        .like("key", "backup_%")
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return (data || []).map(item => ({
-        id: item.key,
-        timestamp: item.updated_at,
-        action: item.value?.action || "Backup",
-        data: item.value?.data
-      }));
-    } catch (e) {
-      console.warn("Failed to fetch backups:", e);
-      return [];
-    }
-  },
+  getBackups: async (): Promise<any[]> => adminDbWrite("getBackups", {}),
 
   createBackup: async (actionName: string): Promise<boolean> => {
+    if (typeof window === "undefined" || !sessionStorage.getItem("wedding_admin_passcode")) return false;
     try {
       const backupData = await mockDatabase.exportDatabaseJSON();
       const backupId = `backup_${Date.now()}`;
@@ -495,45 +211,13 @@ export const mockDatabase = {
     }
   },
 
-  pruneBackups: async (): Promise<void> => {
-    try {
-      const { data, error } = await supabase
-        .from("site_configs")
-        .select("key")
-        .like("key", "backup_%")
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      if (data && data.length > 50) {
-        const keysToDelete = data.slice(50).map(item => item.key);
-        const passcode = typeof window !== "undefined" ? sessionStorage.getItem("wedding_admin_passcode") || "" : "";
-        const res = await fetch("/api/save-site-config", {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "x-admin-passcode": passcode
-          },
-          body: JSON.stringify({
-            action: "delete",
-            keys: keysToDelete
-          })
-        });
-        const resData = await res.json();
-        if (!resData.success) throw new Error(resData.error);
-      }
-    } catch (e) {
-      console.warn("Failed to prune backups:", e);
-    }
-  },
+  pruneBackups: async (): Promise<void> => { await adminDbWrite("pruneBackups", {}); },
 
   restoreBackup: async (backupId: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase
-        .from("site_configs")
-        .select("value")
-        .eq("key", backupId)
-        .single();
-      if (error || !data) throw error || new Error("Backup not found");
-      const backupDataStr = JSON.stringify(data.value.data);
+      const value = await mockDatabase.getSiteConfig(backupId, null);
+      if (!value?.data) throw new Error("Backup unavailable");
+      const backupDataStr = JSON.stringify(value.data);
       return await mockDatabase.importBackupJSON(backupDataStr);
     } catch (e) {
       console.error("Failed to restore backup:", e);
@@ -552,50 +236,26 @@ export const mockDatabase = {
     }
   },
 
-  exportDatabaseJSON: async (): Promise<string> => {
-    const getSiteConfigs = async () => {
-      try {
-        return await supabase.from("site_configs").select("*");
-      } catch (e) {
-        return { data: [] };
-      }
-    };
-    const [parties, guests, groups, guestGroups, events, guestEvents, siteConfigsRes] = await Promise.all([
-      mockDatabase.getParties(),
-      mockDatabase.getGuests(),
-      mockDatabase.getGroups(),
-      mockDatabase.getGuestGroups(),
-      mockDatabase.getEvents(),
-      mockDatabase.getGuestEvents(),
-      getSiteConfigs()
-    ]);
-    const site_configs = siteConfigsRes.data || [];
-    return JSON.stringify({
-      parties,
-      guests,
-      groups,
-      guest_groups: guestGroups,
-      events,
-      guest_events: guestEvents,
-      site_configs
-    }, null, 2);
-  },
+  exportDatabaseJSON: async (): Promise<string> => JSON.stringify(await adminDbWrite("exportDatabaseJSON", {}), null, 2),
 
-  getSiteConfig: async (key: string, localFallback: any): Promise<any> => {
-    try {
-      const res = await fetch(`/api/get-site-config?key=${encodeURIComponent(key)}`);
-      if (!res.ok) {
-        return localFallback;
-      }
-      const data = await res.json();
-      if (data.success && data.value !== undefined && data.value !== null) {
+  getSiteConfig: async (key: string, localFallback: any, strict = false): Promise<any> => {
+    const passcode = typeof window !== "undefined" ? sessionStorage.getItem("wedding_admin_passcode") || "" : "";
+    const requestKey = key + (passcode ? ":admin:" + passcode : ":public");
+    let request = configRequests.get(requestKey);
+    if (!request) {
+      request = fetch(`/api/get-site-config?key=${encodeURIComponent(key)}`, {
+        headers: passcode ? { "x-admin-passcode": passcode } : {},
+        cache: "no-store", signal: AbortSignal.timeout(15000),
+      }).then(async res => {
+        if (!res.ok) throw new Error("Configuration unavailable");
+        const data = await res.json();
+        if (!data.success) throw new Error("Configuration unavailable");
         return data.value;
-      }
-      return localFallback;
-    } catch (e) {
-      console.warn(`Failed to fetch site config for '${key}':`, e);
-      return localFallback;
+      }).finally(() => configRequests.delete(requestKey));
+      configRequests.set(requestKey, request);
     }
+    try { return await request ?? localFallback; }
+    catch (error) { if (strict) throw error; return localFallback; }
   },
 
   saveSiteConfig: async (key: string, value: any): Promise<void> => {
@@ -615,23 +275,14 @@ export const mockDatabase = {
   },
 
   getFundContributions: async (): Promise<{ contributions: FundContribution[]; totalRaised: number; targetAmount: number; initialRaised: number }> => {
-    try {
-      const res = await fetch("/api/fund-contributions");
-      if (!res.ok) throw new Error("Failed to fetch contributions");
-      const data = await res.json();
-      return {
-        contributions: data.contributions || [],
-        totalRaised: data.totalRaised || 0,
-        targetAmount: data.targetAmount || 5000,
-        initialRaised: data.initialRaised || 0
-      };
-    } catch (e) {
-      console.warn("Failed to fetch fund contributions, returning fallback:", e);
-      return { contributions: [], totalRaised: 0, targetAmount: 5000, initialRaised: 0 };
-    }
+    const passcode = typeof window !== "undefined" ? sessionStorage.getItem("wedding_admin_passcode") || "" : "";
+    const res = await fetch("/api/fund-contributions", { headers: passcode ? { "x-admin-passcode": passcode } : {}, cache: "no-store", signal: AbortSignal.timeout(15000) });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || "Gift totals are temporarily unavailable.");
+    return { contributions: data.contributions ?? [], totalRaised: data.totalRaised, targetAmount: data.targetAmount, initialRaised: data.initialRaised };
   },
 
-  addFundContribution: async (contribution: { guestName: string; amount: number; paymentMethod: 'venmo' | 'zelle' | 'cash'; note?: string }): Promise<FundContribution> => {
+  addFundContribution: async (contribution: { id?: string; guestName: string; amount: number; paymentMethod: 'venmo' | 'zelle' | 'cash'; note?: string }): Promise<FundContribution> => {
     const res = await fetch("/api/fund-contributions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -677,35 +328,6 @@ export const mockDatabase = {
   },
 
   resetToSeeds: async (): Promise<void> => {
-    const payload = {
-      parties: DEFAULT_PARTIES,
-      guests: DEFAULT_GUESTS,
-      groups: DEFAULT_GROUPS,
-      events: DEFAULT_EVENTS,
-      guest_groups: DEFAULT_GUEST_GROUPS,
-      guest_events: DEFAULT_GUEST_EVENTS
-    };
-    await adminDbWrite("resetToSeeds", payload);
-
-    // 3. Sync local UI configurations to site_configs table in Supabase
-    try {
-      const uiConfigs = [
-        { key: "admin", value: adminConfig },
-        { key: "dj_lineup", value: djConfig },
-        { key: "faq", value: faqConfig },
-        { key: "general", value: generalConfig },
-        { key: "map", value: mapConfig },
-        { key: "registry", value: registryConfig },
-        { key: "story", value: storyConfig },
-        { key: "travel", value: travelConfig },
-        { key: "weekend", value: weekendConfig }
-      ];
-
-      for (const config of uiConfigs) {
-        await mockDatabase.saveSiteConfig(config.key, config.value);
-      }
-    } catch (configError) {
-      console.warn("Failed to sync UI configs to site_configs table (table might not exist yet):", configError);
-    }
+    await adminDbWrite("resetToSeeds", {});
   }
 };

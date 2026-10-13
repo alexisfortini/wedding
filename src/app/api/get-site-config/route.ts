@@ -1,40 +1,21 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { apiFailure, ApiError, isAdminRequest, readConfig, serverDatabase } from "@/lib/serverDatabase";
+import adminDefaults from "@config/ui/admin.json";
 
-export const maxDuration = 60; // 60 seconds max duration
+const publicKeys = new Set(["general", "story", "faq", "registry", "travel", "map", "images", "weekend", "dj_lineup", "gallery", "meals", "admin"]);
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const key = searchParams.get("key");
-
-    if (!key) {
-      return NextResponse.json({ success: false, error: "Missing key parameter" }, { status: 400 });
+    const key = new URL(req.url).searchParams.get("key");
+    if (!key || key.length > 100) throw new ApiError("A valid configuration key is required.", 400);
+    const db = serverDatabase();
+    const admin = await isAdminRequest(req, db);
+    if (!publicKeys.has(key) && !admin) throw new ApiError("This information requires an admin sign-in.", 401);
+    const row = await readConfig(db, key);
+    let value = row?.value ?? null;
+    if (key === "admin") {
+      value = value ?? adminDefaults;
+      if (!admin) value = { admins: value.admins ?? [] };
     }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes("placeholder")) {
-      return NextResponse.json({ success: true, value: null });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const { data, error } = await supabase
-      .from("site_configs")
-      .select("value")
-      .eq("key", key)
-      .single();
-
-    if (error) {
-      // If the row doesn't exist or is not found, return null value instead of failing
-      return NextResponse.json({ success: true, value: null });
-    }
-
-    return NextResponse.json({ success: true, value: data?.value });
-  } catch (err: any) {
-    console.error("Failed to execute get site config API:", err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
-  }
+    return Response.json({ success: true, value }, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) { return apiFailure(error); }
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import AIChat from "@/components/AIChat";
+import MotionProvider from "@/components/MotionProvider";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -42,8 +43,10 @@ export default function RootLayout({
       className={`${cormorant.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {children}
-        <AIChat />
+        <MotionProvider>
+          {children}
+          <AIChat />
+        </MotionProvider>
       </body>
     </html>
   );

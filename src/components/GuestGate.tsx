@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabase";
-import { mockDatabase, Guest } from "@/lib/mockDatabase";
+import { lookupGuest } from "@/lib/guestLookup";
+import { mockDatabase } from "@/lib/mockDatabase";
 import generalConfigDefault from "@config/ui/general.json";
 
 interface GuestGateProps {
@@ -16,6 +16,7 @@ export default function GuestGate({ onAccessGranted }: GuestGateProps) {
   const [lastName, setLastName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [restoring, setRestoring] = useState(true);
 
   useEffect(() => {
     mockDatabase.getSiteConfig("general", generalConfigDefault).then(setConfig);
@@ -34,118 +35,98 @@ export default function GuestGate({ onAccessGranted }: GuestGateProps) {
     onAccessGranted(guestData);
   };
 
-  // Check if guest is already in session (LocalStorage for now, can move to cookie/middleware later)
-  useEffect(() => {
-    const savedGuestStr = localStorage.getItem("wedding_guest");
-    if (savedGuestStr) {
-      try {
-        const savedGuest = JSON.parse(savedGuestStr);
-        // Instantly grant access using cached data to avoid flash/delay
-        grantAccess(savedGuest);
+  const rememberGuest = (guest: any) => {
+    try {
+      localStorage.setItem("wedding_guest", JSON.stringify({ id: guest.id, first_name: guest.first_name, last_name: guest.last_name }));
+    } catch { /* A blocked browser storage setting must not prevent sign-in. */ }
+  };
 
-        if (savedGuest && savedGuest.id && savedGuest.id !== "mock-guest-id") {
-          // Re-fetch in the background to update with freshest details (like updated party_id)
-          supabase
-            .from("guests")
-            .select(`
-              *,
-              parties (
-                name
-              )
-            `)
-            .eq("id", savedGuest.id)
-            .single()
-            .then(({ data, error }) => {
-              if (!error && data) {
-                localStorage.setItem("wedding_guest", JSON.stringify(data));
-                grantAccess(data);
-              }
-            });
+  // The saved identifier only helps find the invitation; current details always come from Supabase.
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    const restore = async () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem("wedding_guest") || "null");
+        if (!saved?.id) return;
+        setFirstName(typeof saved.first_name === "string" ? saved.first_name : "");
+        setLastName(typeof saved.last_name === "string" ? saved.last_name : "");
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(saved.id)) {
+          localStorage.removeItem("wedding_guest");
+          return;
         }
-      } catch (e) {
-        console.error("Error reading or refreshing saved guest:", e);
+        const data = await lookupGuest({ id: saved.id }, controller.signal);
+        if (cancelled) return;
+        if (data) { rememberGuest(data); grantAccess(data); }
+        else localStorage.removeItem("wedding_guest");
+      } catch (error) {
+        if (!cancelled && !(error instanceof SyntaxError)) setError("We couldn't reopen your invitation. Your name is filled in below so you can retry.");
       }
-    }
+      finally { if (!cancelled) setRestoring(false); }
+    };
+    restore();
+    return () => { cancelled = true; controller.abort(); };
   }, [onAccessGranted]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName || !lastName) return;
-
+    if (loading || !firstName.trim() || !lastName.trim()) return;
     setLoading(true);
     setError("");
-
     try {
-      // Query guests table (case-insensitive)
-      const { data, error: fbError } = await supabase
-        .from("guests")
-        .select(`
-          *,
-          parties (
-            name
-          )
-        `)
-        .ilike("first_name", firstName.trim())
-        .ilike("last_name", lastName.trim())
-        .single();
-
-      if (fbError || !data) {
-        throw new Error("Invitation not found in Supabase");
+      const guest = await mockDatabase.findGuestByName(firstName, lastName);
+      if (!guest) {
+        setError(`Unable to find an invitation for ${firstName.trim()} ${lastName.trim()}. Please check spelling or contact the hosts.`);
+        return;
       }
-
-      localStorage.setItem("wedding_guest", JSON.stringify(data));
-      grantAccess(data);
-    } catch (err) {
-      console.warn("Supabase lookup failed or bypassed. Querying local mockDatabase:", err);
-      
-      try {
-        const localGuest = await mockDatabase.findGuestByName(firstName, lastName);
-        if (localGuest) {
-          localStorage.setItem("wedding_guest", JSON.stringify(localGuest));
-          grantAccess(localGuest);
-        } else {
-          setError(`Unable to find an invitation for ${firstName.trim()} ${lastName.trim()}. Please check spelling or contact Alexis & Kelsey.`);
-        }
-      } catch (innerErr) {
-        console.error("Database access failed:", innerErr);
-        setError("Unable to find invitation. Please check spelling or contact the hosts.");
-      }
-    } finally {
-      setLoading(false);
-    }
+      rememberGuest(guest);
+      grantAccess(guest);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "The guest list is temporarily unavailable. Please try again.");
+    } finally { setLoading(false); }
   };
 
+  if (restoring) return <div className="fixed inset-0 z-[100] bg-cream flex items-center justify-center" role="status">Opening your invitation…</div>;
+
   return (
-    <div className="fixed inset-0 z-[100] bg-cream flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-[100] bg-cream flex overflow-y-auto items-start justify-center p-4 sm:p-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-white border border-sage/20 p-10 md:p-12 shadow-sm text-center"
+        className="max-w-md w-full my-auto bg-surface border border-line p-6 sm:p-10 md:p-12 shadow-card text-center"
       >
-        <h1 className="text-4xl font-serif text-sage mb-2">{config.partner1} & {config.partner2}</h1>
-        <p className="font-sans text-xs uppercase tracking-[0.3em] text-charcoal/60 mb-10">{config.date} • {config.location_name}</p>
+        <h1 className="text-4xl font-serif text-charcoal mb-2 text-balance">{config.partner1} & {config.partner2}</h1>
+        <p className="font-sans text-label uppercase tracking-label text-muted mb-10">{config.date} • {config.location_name}</p>
         
         <div className="w-12 h-[1px] bg-sage/30 mx-auto mb-10"></div>
         
         <form onSubmit={handleLogin} className="space-y-8">
           <div className="text-left">
-            <label className="block font-sans text-[10px] uppercase tracking-widest text-charcoal/50 mb-2 font-medium">First Name</label>
+            <label htmlFor="guest-first-name" className="block font-sans text-label uppercase tracking-label text-muted mb-2 font-medium">First Name</label>
             <input
               type="text"
+              id="guest-first-name"
+              autoComplete="given-name"
+              required
+              maxLength={100}
               value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className="w-full border-b border-sage/40 bg-transparent py-3 outline-none font-serif text-xl focus:border-sage transition-colors text-charcoal"
+              onChange={(e) => { setFirstName(e.target.value); setError(""); }}
+              className="w-full border-b border-line bg-transparent py-3 outline-none font-serif text-xl focus:border-action transition-colors text-charcoal"
               placeholder="Your first name"
               disabled={loading}
             />
           </div>
           <div className="text-left">
-            <label className="block font-sans text-[10px] uppercase tracking-widest text-charcoal/50 mb-2 font-medium">Last Name</label>
+            <label htmlFor="guest-last-name" className="block font-sans text-label uppercase tracking-label text-muted mb-2 font-medium">Last Name</label>
             <input
               type="text"
+              id="guest-last-name"
+              autoComplete="family-name"
+              required
+              maxLength={100}
               value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              className="w-full border-b border-sage/40 bg-transparent py-3 outline-none font-serif text-xl focus:border-sage transition-colors text-charcoal"
+              onChange={(e) => { setLastName(e.target.value); setError(""); }}
+              className="w-full border-b border-line bg-transparent py-3 outline-none font-serif text-xl focus:border-action transition-colors text-charcoal"
               placeholder="Your last name"
               disabled={loading}
             />
@@ -153,11 +134,11 @@ export default function GuestGate({ onAccessGranted }: GuestGateProps) {
 
           <AnimatePresence>
             {error && (
-              <motion.p
+              <motion.p role="alert"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="text-xs text-red-500 font-sans tracking-wide leading-relaxed"
+                className="text-xs text-danger font-sans tracking-normal leading-relaxed"
               >
                 {error}
               </motion.p>
@@ -166,8 +147,8 @@ export default function GuestGate({ onAccessGranted }: GuestGateProps) {
 
           <button
             type="submit"
-            disabled={loading || !firstName || !lastName}
-            className="w-full py-5 bg-sage text-white font-sans text-xs uppercase tracking-[0.25em] shadow-debossed hover:bg-sage/90 disabled:opacity-50 transition-all"
+            disabled={loading || !firstName.trim() || !lastName.trim()}
+            className="w-full py-5 bg-action text-cream font-sans text-label uppercase tracking-label shadow-card hover:bg-action-hover disabled:opacity-50 transition-all"
           >
             {loading ? "Searching..." : "Access Wedding Website"}
           </button>

@@ -10,32 +10,8 @@ import {
 import { mockDatabase } from "@/lib/mockDatabase";
 import defaultRegistryConfig from "@config/ui/registry.json";
 
-function AnimatedCounter({ value }: { value: number }) {
-  const [displayValue, setDisplayValue] = useState(0);
-
-  useEffect(() => {
-    let startTimestamp: number | null = null;
-    const startValue = displayValue;
-    const duration = 1000;
-
-    const step = (timestamp: number) => {
-      if (!startTimestamp) startTimestamp = timestamp;
-      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      const current = Math.floor(startValue + (value - startValue) * easeOut);
-      setDisplayValue(current);
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else {
-        setDisplayValue(value);
-      }
-    };
-
-    requestAnimationFrame(step);
-  }, [value]);
-
-  return <>{displayValue.toLocaleString()}</>;
-}
+import { useDialog } from "@/lib/useDialog";
+import AnimatedCounter from "@/components/AnimatedCounter";
 
 export default function RegistryItemsPage() {
   const [config, setConfig] = useState<any>(defaultRegistryConfig);
@@ -46,6 +22,10 @@ export default function RegistryItemsPage() {
   const [claimName, setClaimName] = useState<string>("");
   const [isSubmittingClaim, setIsSubmittingClaim] = useState<boolean>(false);
   const [claimSuccessMessage, setClaimSuccessMessage] = useState<string | null>(null);
+
+  const [claimError, setClaimError] = useState("");
+  const closeClaim = () => { if (!isSubmittingClaim) { setClaimingItem(null); setClaimSuccessMessage(null); setClaimError(""); } };
+  const dialogRef = useDialog(claimingItem !== null, closeClaim);
 
   useEffect(() => {
     mockDatabase.getSiteConfig("registry", defaultRegistryConfig).then(setConfig);
@@ -65,55 +45,20 @@ export default function RegistryItemsPage() {
   }, []);
 
   const handleConfirmClaim = async () => {
-    if (!claimingItem) return;
-
-    setIsSubmittingClaim(true);
+    if (!claimingItem || isSubmittingClaim) return;
+    setIsSubmittingClaim(true); setClaimError("");
     try {
       const res = await fetch("/api/registry-claim", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          itemId: claimingItem.id,
-          isPurchased: true,
-          purchasedBy: claimName.trim() || undefined
-        })
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20000),
+        body: JSON.stringify({ itemId: claimingItem.id, isPurchased: true, purchasedBy: claimName.trim() }),
       });
-
       const data = await res.json();
-      if (data.success && data.registryConfig) {
-        setConfig(data.registryConfig);
-      } else {
-        // Optimistic local update fallback
-        setConfig((prev: any) => ({
-          ...prev,
-          items: (prev.items || []).map((item: any) =>
-            item.id === claimingItem.id
-              ? { ...item, is_purchased: true, purchased_by: claimName.trim() || "A wedding guest" }
-              : item
-          )
-        }));
-      }
-
-      setClaimSuccessMessage(`Thank you so much! "${claimingItem.title}" has been marked as claimed.`);
-      setTimeout(() => {
-        setClaimingItem(null);
-        setClaimSuccessMessage(null);
-      }, 2200);
-    } catch (err) {
-      console.error("Failed to claim item:", err);
-      // Optimistic local update
-      setConfig((prev: any) => ({
-        ...prev,
-        items: (prev.items || []).map((item: any) =>
-          item.id === claimingItem.id
-            ? { ...item, is_purchased: true, purchased_by: claimName.trim() || "A wedding guest" }
-            : item
-        )
-      }));
-      setClaimingItem(null);
-    } finally {
-      setIsSubmittingClaim(false);
-    }
+      if (!res.ok || !data.success || !data.registryConfig) throw new Error(data.error || "Your claim couldn't be saved. Please try again.");
+      setConfig(data.registryConfig);
+      setClaimSuccessMessage(`Thank you! "${claimingItem.title}" has been marked as claimed.`);
+    } catch (error) {
+      setClaimError(error instanceof Error ? error.message : "Your claim couldn't be saved. Please try again.");
+    } finally { setIsSubmittingClaim(false); }
   };
 
   const rawItems = config.items || (defaultRegistryConfig as any).items || [];
@@ -162,46 +107,45 @@ export default function RegistryItemsPage() {
         <div>
           <Link
             href="/#registry"
-            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-charcoal/60 hover:text-terracotta transition-colors mb-8 group"
+            className="inline-flex items-center gap-2 text-xs uppercase tracking-label text-muted hover:text-action transition-colors mb-8 group"
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
             <span>Back to Wedding Site</span>
           </Link>
 
           <div className="text-center max-w-2xl mx-auto space-y-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-terracotta/10 border border-terracotta/20 text-terracotta text-xs font-semibold uppercase tracking-widest">
+            <div className="inline-flex items-center gap-2 text-action text-xs font-semibold uppercase tracking-label">
               <Gift size={13} />
               <span>Curated Wishlist</span>
             </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif text-charcoal">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif text-charcoal text-balance">
               {storeCard.title || "Gift Registry"}
             </h1>
-            <p className="text-charcoal/70 font-sans text-sm md:text-base leading-relaxed">
+            <p className="text-charcoal/80 font-sans text-copy md:text-base leading-relaxed">
               {storeCard.description || "Browse curated items for our home and partner store registries. Thank you for thinking of us as we build our lives together!"}
             </p>
           </div>
         </div>
 
         {/* Live Items Counter Banner */}
-        <div className="bg-white border border-sage/20 rounded-sm p-6 sm:p-8 shadow-sm text-center max-w-xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-sans uppercase tracking-wider font-semibold mb-3">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Live Wishlist Status</span>
+        <div className="bg-surface border border-line rounded-sm p-6 sm:p-8 shadow-card text-center max-w-xl mx-auto">
+          <div className="text-muted text-xs font-sans uppercase tracking-label font-semibold mb-3">
+            <span>Wishlist Status</span>
           </div>
           <div className="text-4xl sm:text-5xl font-serif text-charcoal font-medium h-12 flex items-baseline justify-center gap-1.5 leading-none">
             <AnimatedCounter value={purchasedItemsCount} />
-            <span className="text-xl sm:text-2xl text-charcoal/60 font-normal">of {totalItemsCount}</span>
+            <span className="text-xl sm:text-2xl text-muted font-normal">of {totalItemsCount}</span>
           </div>
-          <div className="text-xs uppercase tracking-wider text-charcoal/50 mt-1.5">
+          <div className="text-xs uppercase tracking-label text-muted mt-1.5">
             Gifts Claimed So Far
           </div>
 
-          <div className="mt-5 pt-5 border-t border-sage/15 max-w-md mx-auto">
-            <div className="flex justify-between text-xs text-charcoal/70 mb-1.5 font-medium">
+          <div className="mt-5 pt-5 border-t border-line max-w-md mx-auto">
+            <div className="flex justify-between text-xs text-charcoal/80 mb-1.5 font-medium">
               <span>Progress</span>
               <span>{purchasedPercentage}% of Wishlist Claimed</span>
             </div>
-            <div className="w-full h-2 bg-cream/70 rounded-full overflow-hidden border border-sage/15">
+            <div className="w-full h-2 bg-cream/70 rounded-full overflow-hidden border border-line">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${purchasedPercentage}%` }}
@@ -214,15 +158,15 @@ export default function RegistryItemsPage() {
 
         {/* Category Filters */}
         {categories.length > 2 && (
-          <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
                 className={`font-sans text-xs px-4 py-2 rounded-full transition-all cursor-pointer whitespace-nowrap font-medium ${
                   selectedCategory === cat
-                    ? "bg-terracotta text-cream shadow-xs font-semibold"
-                    : "bg-white text-charcoal/70 hover:bg-cream/70 border border-sage/20"
+                    ? "bg-action text-cream shadow-card font-semibold"
+                    : "bg-surface text-charcoal/80 hover:bg-cream/70 border border-line"
                 }`}
               >
                 {cat}
@@ -233,17 +177,17 @@ export default function RegistryItemsPage() {
 
         {/* Grid of Curated Items */}
         {itemsList.length === 0 ? (
-          <div className="text-center py-16 bg-white border border-sage/20 rounded-sm">
-            <p className="font-serif text-xl text-charcoal/60">No registry items configured yet.</p>
+          <div className="text-center py-16 bg-surface border border-line rounded-sm">
+            <p className="font-serif text-xl text-muted leading-relaxed">No registry items configured yet.</p>
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-sage/20 pb-3">
-              <h3 className="font-serif text-2xl text-charcoal flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
+              <h3 className="font-serif text-2xl text-charcoal flex items-center gap-2 text-balance">
                 <span>Curated Registry Items</span>
-                <span className="text-sm font-sans font-normal text-charcoal/50">({filteredItems.length})</span>
+                <span className="text-sm font-sans font-normal text-muted">({filteredItems.length})</span>
               </h3>
-              <span className="text-xs font-sans text-charcoal/50">Direct Links to Stores</span>
+              <span className="text-xs font-sans text-muted">Direct Links to Stores</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
@@ -256,12 +200,12 @@ export default function RegistryItemsPage() {
                 return (
                   <div
                     key={item.id || item.title}
-                    className={`h-full bg-white border border-sage/20 rounded-sm flex flex-col justify-between overflow-hidden transition-all duration-300 hover:border-terracotta/40 hover:shadow-md group ${
+                    className={`h-full bg-surface border border-line rounded-sm flex flex-col justify-between overflow-hidden transition-all duration-300 hover:border-terracotta/40 hover:shadow-card group ${
                       isPurchased ? "bg-cream/10" : ""
                     }`}
                   >
                     {/* Top Image Container */}
-                    <div className="relative aspect-square w-full shrink-0 bg-cream/30 overflow-hidden border-b border-sage/15 flex items-center justify-center">
+                    <div className="relative aspect-square w-full shrink-0 bg-cream/30 overflow-hidden border-b border-line flex items-center justify-center">
                       {item.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -281,13 +225,13 @@ export default function RegistryItemsPage() {
                       )}
 
                       {/* Store Badge */}
-                      <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs px-2.5 py-1 text-[10px] font-sans uppercase tracking-wider text-charcoal/80 rounded-sm border border-sage/20 shadow-2xs font-medium">
+                      <span className="absolute top-3 left-3 bg-surface/90 backdrop-blur-xs px-2.5 py-1 text-label font-sans uppercase tracking-label text-charcoal/80 rounded-sm border border-line shadow-card font-medium">
                         {storeName}
                       </span>
 
                       {/* Claimed Badge */}
                       {isPurchased && (
-                        <div className="absolute top-3 right-3 bg-emerald-700 text-white px-2.5 py-1 text-[10px] font-sans uppercase tracking-wider rounded-sm shadow-sm flex items-center gap-1 font-semibold">
+                        <div className="absolute top-3 right-3 bg-success text-cream px-2.5 py-1 text-label font-sans uppercase tracking-label rounded-sm shadow-card flex items-center gap-1 font-semibold">
                           <Check size={11} />
                           <span>Purchased</span>
                         </div>
@@ -297,19 +241,19 @@ export default function RegistryItemsPage() {
                     {/* Middle: Title, Description & Price */}
                     <div className="p-5 flex-1 flex flex-col justify-between">
                       <div>
-                        <h4 className="font-serif text-lg text-charcoal leading-snug group-hover:text-terracotta transition-colors line-clamp-2 min-h-[2.75rem]">
+                        <h4 className="font-serif text-lg text-charcoal leading-snug group-hover:text-action transition-colors line-clamp-2 min-h-[2.75rem]">
                           {item.title}
                         </h4>
-                        <p className="font-sans text-xs text-charcoal/60 mt-1.5 line-clamp-2 min-h-[2.25rem] leading-relaxed">
+                        <p className="font-sans text-copy text-muted mt-1.5 line-clamp-2 min-h-[2.25rem] leading-relaxed">
                           {itemDescription}
                         </p>
                       </div>
 
                       <div className="flex items-center justify-between text-xs font-sans pt-3 mt-3 border-t border-sage/10">
-                        <span className="font-mono font-semibold text-charcoal">
+                        <span className="font-sans tabular-nums font-semibold text-charcoal">
                           {item.price ? (item.price.startsWith("$") ? item.price : `$${item.price}`) : ""}
                         </span>
-                        <span className="text-[10px] uppercase tracking-wider text-charcoal/40 font-medium">
+                        <span className="text-label uppercase tracking-label text-muted font-medium">
                           {item.category || ""}
                         </span>
                       </div>
@@ -318,8 +262,8 @@ export default function RegistryItemsPage() {
                     {/* Bottom: Action Buttons */}
                     <div className="p-5 pt-0">
                       {isPurchased ? (
-                        <div className="h-10 px-3 bg-emerald-50/70 border border-emerald-200/70 rounded-sm flex items-center justify-between gap-2">
-                          <span className="text-xs font-serif italic text-emerald-800 truncate">
+                        <div className="h-10 px-3 bg-success-soft border border-success-line rounded-sm flex items-center justify-between gap-2">
+                          <span className="text-caption font-serif italic text-success truncate">
                             {item.purchased_by
                               ? `Gifted by ${item.purchased_by} ❤️`
                               : "Marked as purchased"}
@@ -329,7 +273,7 @@ export default function RegistryItemsPage() {
                               href={itemLink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="shrink-0 text-[10px] uppercase tracking-wider text-emerald-800/70 hover:text-emerald-950 font-sans font-semibold transition-colors flex items-center gap-1"
+                              className="shrink-0 text-label uppercase tracking-label text-success hover:text-charcoal font-sans font-semibold transition-colors flex items-center gap-1"
                             >
                               <span>View</span>
                               <ExternalLink size={11} />
@@ -337,12 +281,12 @@ export default function RegistryItemsPage() {
                           )}
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 gap-2 h-10">
+                        <div className="flex flex-wrap gap-2">
                           <a
                             href={itemLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="h-full font-sans text-[10px] uppercase tracking-wider bg-terracotta text-cream px-3 rounded-sm hover:bg-charcoal transition-colors font-semibold text-center flex items-center justify-center gap-1.5 shadow-2xs group/btn whitespace-nowrap"
+                            className="flex-1 basis-32 min-h-11 py-2 font-sans text-label uppercase tracking-normal bg-action text-cream px-3 rounded-sm hover:bg-action-hover transition-colors font-semibold text-center flex items-center justify-center gap-1.5 shadow-card group/btn whitespace-nowrap"
                           >
                             <span>View & Buy</span>
                             <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 transition-transform shrink-0" />
@@ -353,7 +297,7 @@ export default function RegistryItemsPage() {
                             onClick={() => {
                               setClaimingItem(item);
                             }}
-                            className="h-full font-sans text-[10px] uppercase tracking-wider bg-cream/30 hover:bg-cream/80 text-charcoal border border-sage/25 px-3 rounded-sm transition-colors font-semibold whitespace-nowrap cursor-pointer flex items-center justify-center"
+                            className="flex-1 basis-32 min-h-11 py-2 font-sans text-label uppercase tracking-normal bg-cream/30 hover:bg-cream/80 text-charcoal border border-line px-3 rounded-sm transition-colors font-semibold whitespace-nowrap cursor-pointer flex items-center justify-center"
                             title="Let us know you purchased this so others don't buy duplicate gifts"
                           >
                             Mark Claimed
@@ -370,10 +314,10 @@ export default function RegistryItemsPage() {
 
         {/* SECTION B: Partner Stores (if configured) */}
         {storesList.length > 0 && (
-          <div className="pt-8 border-t border-sage/20 space-y-6">
+          <div className="pt-8 border-t border-line space-y-6">
             <div className="text-center space-y-1">
-              <h3 className="font-serif text-2xl text-charcoal">Partner Store Registries</h3>
-              <p className="font-sans text-xs text-charcoal/60">
+              <h3 className="font-serif text-2xl text-charcoal text-balance">Partner Store Registries</h3>
+              <p className="font-sans text-copy text-muted">
                 You can also browse our full registered collections directly on these retailers.
               </p>
             </div>
@@ -385,22 +329,22 @@ export default function RegistryItemsPage() {
                   href={store.url || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-full min-h-[84px] p-5 bg-white border border-sage/20 rounded-sm hover:border-terracotta/50 hover:shadow-md transition-all flex items-center justify-between group"
+                  className="h-full min-h-[84px] p-5 bg-surface border border-line rounded-sm hover:border-terracotta/50 hover:shadow-card transition-all flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 shrink-0 rounded-full bg-cream/40 flex items-center justify-center text-charcoal/70 group-hover:text-terracotta transition-colors">
+                    <div className="w-10 h-10 shrink-0 rounded-full bg-cream/40 flex items-center justify-center text-charcoal/80 group-hover:text-action transition-colors">
                       <ShoppingBag size={18} />
                     </div>
                     <div>
-                      <h4 className="font-serif text-base text-charcoal font-medium group-hover:text-terracotta transition-colors">
+                      <h4 className="font-serif text-base text-charcoal font-medium group-hover:text-action transition-colors">
                         {store.name}
                       </h4>
-                      <span className="text-[10px] font-sans uppercase tracking-wider text-charcoal/40">
+                      <span className="text-label font-sans uppercase tracking-label text-muted">
                         View Complete Registry
                       </span>
                     </div>
                   </div>
-                  <ExternalLink size={14} className="shrink-0 text-charcoal/40 group-hover:text-terracotta group-hover:translate-x-0.5 transition-all" />
+                  <ExternalLink size={14} className="shrink-0 text-muted group-hover:text-action group-hover:translate-x-0.5 transition-all" />
                 </a>
               ))}
             </div>
@@ -408,12 +352,12 @@ export default function RegistryItemsPage() {
         )}
 
         {/* Footer Alternative Link */}
-        <div className="pt-8 border-t border-sage/20 text-center">
-          <p className="text-sm font-sans text-charcoal/70">
+        <div className="pt-8 border-t border-line text-center">
+          <p className="text-copy font-sans text-charcoal/80">
             Prefer to contribute directly toward our honeymoon fund?{" "}
             <Link
               href="/registry/fund"
-              className="font-semibold text-terracotta hover:underline inline-flex items-center gap-1"
+              className="font-semibold text-action hover:underline inline-flex items-center gap-1"
             >
               <span>Contribute to Honeymoon Fund</span>
               <ArrowRight size={13} />
@@ -432,7 +376,7 @@ export default function RegistryItemsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => !isSubmittingClaim && setClaimingItem(null)}
+              onClick={closeClaim}
               className="fixed inset-0 bg-charcoal/80 backdrop-blur-md"
             />
 
@@ -442,69 +386,75 @@ export default function RegistryItemsPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ duration: 0.25 }}
-              className="relative w-full max-w-md bg-white border border-sage/30 rounded-sm shadow-2xl overflow-hidden z-10 p-6 md:p-7 space-y-5 my-auto"
+              className="relative w-full max-w-md bg-surface border border-line rounded-sm shadow-floating overflow-hidden z-10 p-6 md:p-7 space-y-5 my-auto"
+              ref={dialogRef} tabIndex={-1} aria-label="Claim registry gift"
               role="dialog"
               aria-modal="true"
             >
               {claimSuccessMessage ? (
                 <div className="py-6 text-center space-y-3">
-                  <div className="w-14 h-14 mx-auto rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-success-soft text-success flex items-center justify-center">
                     <CheckCircle2 size={32} />
                   </div>
                   <h4 className="font-serif text-2xl text-charcoal">Marked as Purchased!</h4>
-                  <p className="font-sans text-xs text-charcoal/70 max-w-xs mx-auto leading-relaxed">
+                  <p className="font-sans text-copy text-charcoal/80 max-w-xs mx-auto leading-relaxed">
                     {claimSuccessMessage}
                   </p>
+                  <button onClick={closeClaim} className="px-5 py-3 bg-action text-cream rounded-sm">Done</button>
                 </div>
               ) : (
                 <>
-                  <div className="flex items-start justify-between gap-3 border-b border-sage/15 pb-3">
+                  <div className="flex items-start justify-between gap-3 border-b border-line pb-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-success-soft text-success flex items-center justify-center shrink-0">
                         <Check size={16} />
                       </div>
                       <div>
-                        <span className="font-sans text-[9px] uppercase tracking-wider text-emerald-800 font-semibold block">Guest Self-Report</span>
+                        <span className="font-sans text-label uppercase tracking-label text-success font-semibold block">Guest Self-Report</span>
                         <h4 className="font-serif text-lg text-charcoal">Mark as Purchased</h4>
                       </div>
                     </div>
                     <button
                       onClick={() => !isSubmittingClaim && setClaimingItem(null)}
-                      className="text-charcoal/50 hover:text-charcoal p-1 cursor-pointer"
+                      aria-label="Close gift confirmation"
+                      className="text-muted hover:text-charcoal p-2 cursor-pointer"
                       disabled={isSubmittingClaim}
                     >
                       <X size={18} />
                     </button>
                   </div>
 
-                  <div className="space-y-4 text-xs font-sans text-charcoal/80">
+                  <div className="space-y-4 text-copy font-sans text-charcoal/80">
                     <p className="leading-relaxed">
-                      Thank you so much! Did you purchase <strong className="font-serif text-sm text-charcoal font-semibold">{claimingItem.title}</strong>?
+                      Thank you so much! Did you purchase <strong className="font-serif text-lg text-charcoal font-semibold">{claimingItem.title}</strong>?
                     </p>
-                    <p className="text-charcoal/60 leading-relaxed">
+                    <p className="text-muted leading-relaxed">
                       Marking this will update our live registry status so other guests know not to purchase duplicates.
                     </p>
 
                     <div>
-                      <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">
+                      <label className="block text-label uppercase tracking-label text-muted mb-1.5 font-semibold">
                         Your Name (Optional — so the couple can thank you!):
                       </label>
                       <input
                         type="text"
+                        aria-label="Your name for the gift"
+                        maxLength={200}
                         value={claimName}
                         onChange={(e) => setClaimName(e.target.value)}
                         placeholder="e.g. Grandma Helen or The Fortini Family"
-                        className="w-full border border-sage/35 p-2.5 bg-cream/20 text-xs outline-none focus:border-emerald-600 rounded-sm"
+                        className="w-full border border-line p-2.5 bg-cream/20 text-base outline-none focus:border-action rounded-sm"
                         disabled={isSubmittingClaim}
                       />
                     </div>
                   </div>
 
+                  {claimError && <p role="alert" className="font-sans text-copy text-danger">{claimError}</p>}
                   <div className="flex items-center gap-3 pt-2">
                     <button
                       onClick={handleConfirmClaim}
                       disabled={isSubmittingClaim}
-                      className="flex-1 font-sans text-[10px] uppercase tracking-[0.18em] bg-emerald-700 hover:bg-emerald-800 text-white py-3 px-4 rounded-sm transition-colors font-medium flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+                      className="flex-1 font-sans text-label uppercase tracking-normal bg-action hover:bg-action-hover text-cream py-3 px-4 rounded-sm transition-colors font-medium flex items-center justify-center gap-2 cursor-pointer shadow-card disabled:opacity-50"
                     >
                       {isSubmittingClaim ? (
                         <>
@@ -521,7 +471,7 @@ export default function RegistryItemsPage() {
                     <button
                       onClick={() => setClaimingItem(null)}
                       disabled={isSubmittingClaim}
-                      className="font-sans text-[10px] uppercase tracking-wider text-charcoal/60 hover:text-charcoal py-3 px-4 border border-sage/25 hover:bg-cream/40 rounded-sm transition-colors cursor-pointer"
+                      className="font-sans text-label uppercase tracking-label text-muted hover:text-charcoal py-3 px-4 border border-line hover:bg-cream/40 rounded-sm transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>

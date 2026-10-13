@@ -3,50 +3,27 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Heart, Gift, ShoppingBag, Sparkles } from "lucide-react";
+import { Heart, Gift } from "lucide-react";
 import { mockDatabase } from "@/lib/mockDatabase";
-import { getResponsiveImageStyle } from "@/lib/imageHelper";
+import BackgroundPhoto from "./BackgroundPhoto";
 import registryConfigDefault from "@config/ui/registry.json";
 import imagesConfigDefault from "@config/ui/images.json";
 
-function AnimatedCounter({ value }: { value: number }) {
-  const [displayValue, setDisplayValue] = useState(0);
-
-  useEffect(() => {
-    let startTimestamp: number | null = null;
-    const startValue = displayValue;
-    const duration = 1200;
-
-    const step = (timestamp: number) => {
-      if (!startTimestamp) startTimestamp = timestamp;
-      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      const current = Math.floor(startValue + (value - startValue) * easeOut);
-      setDisplayValue(current);
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else {
-        setDisplayValue(value);
-      }
-    };
-
-    requestAnimationFrame(step);
-  }, [value]);
-
-  return <>{displayValue.toLocaleString()}</>;
-}
+import AnimatedCounter from "@/components/AnimatedCounter";
 
 export default function Registry() {
   const [config, setConfig] = useState<any>(registryConfigDefault);
   const [imagesConfig, setImagesConfig] = useState(imagesConfigDefault);
+  const [fundStatus, setFundStatus] = useState<string | null>("Loading gift total…");
   const [totalRaised, setTotalRaised] = useState<number>(0);
   const [targetAmount, setTargetAmount] = useState<number>(5000);
 
   const loadContributions = useCallback(() => {
     mockDatabase.getFundContributions().then((res) => {
       setTotalRaised(res.totalRaised || 0);
-      if (res.targetAmount) setTargetAmount(res.targetAmount);
-    });
+      setTargetAmount(res.targetAmount);
+      setFundStatus(null);
+    }).catch(() => setFundStatus("Gift total is temporarily unavailable."));
   }, []);
 
   useEffect(() => {
@@ -91,30 +68,27 @@ export default function Registry() {
   return (
     <section 
       id="registry" 
-      className="relative py-28 px-6 overflow-hidden"
+      className="relative py-16 md:py-24 px-6 overflow-hidden"
       style={{ clipPath: "inset(0px)" }}
     >
       {/* Background Image & Overlay */}
-      <div 
-        className="responsive-bg-image fixed inset-0 bg-cover pointer-events-none bg-center"
-        style={getResponsiveImageStyle(imagesConfig, "registry", "/photos/engagement/K%26A%20Engagement%20highlights-6.jpg")}
-      />
+      <BackgroundPhoto config={imagesConfig} slot="registry" fallback="/photos/engagement/K%26A%20Engagement%20highlights-6.jpg" />
       <div className="absolute inset-0 bg-charcoal/60 pointer-events-none"></div>
 
       {/* Main Section Content */}
-      <div className="relative max-w-4xl mx-auto z-10">
+      <div className="relative max-w-5xl mx-auto z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 md:mb-12"
         >
-          <span className="font-sans text-[10px] uppercase tracking-[0.25em] text-terracotta block mb-3 font-medium">Registry & Gifts</span>
-          <h2 className="text-4xl md:text-5xl font-serif text-cream mb-4">
+          <span className="font-sans text-label uppercase tracking-label text-cream/90 block mb-3 font-medium">Registry & Gifts</span>
+          <h2 className="text-4xl md:text-5xl font-serif text-cream mb-4 text-balance">
             {config.title || "Registry"}
           </h2>
-          <p className="text-cream/90 font-serif italic text-base max-w-md mx-auto leading-relaxed">
+          <p className="text-cream/90 font-serif italic text-lg max-w-md mx-auto leading-relaxed">
             {config.description}
           </p>
         </motion.div>
@@ -126,20 +100,20 @@ export default function Registry() {
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            className="max-w-xl mx-auto p-10 md:p-12 border border-cream/20 bg-charcoal/40 backdrop-blur-md rounded-sm text-center relative overflow-hidden"
+            className="max-w-xl mx-auto p-6 sm:p-10 md:p-12 border border-cream/20 bg-charcoal/40 rounded-sm text-center relative overflow-hidden"
           >
-            <div className="w-14 h-14 mx-auto rounded-full bg-cream/10 border border-cream/20 flex items-center justify-center text-terracotta mb-6">
-              <Gift size={24} strokeWidth={1.5} />
+            <div className="h-10 mx-auto flex items-center justify-center text-cream/80 mb-6">
+              <Gift size={24} strokeWidth={1.5} aria-hidden="true" />
             </div>
-            <h3 className="text-2xl md:text-3xl font-serif text-cream mb-3 tracking-wide">
+            <h3 className="text-2xl md:text-3xl font-serif text-cream mb-3 tracking-normal text-balance">
               {config.coming_soon_title || "Registry Coming Soon"}
             </h3>
-            <p className="font-serif italic text-cream/80 text-base max-w-md mx-auto leading-relaxed">
+            <p className="font-serif italic text-cream/80 text-lg max-w-md mx-auto leading-relaxed">
               {config.coming_soon_message || "We are currently finalizing our registry items & cash fund options. Please check back soon!"}
             </p>
           </motion.div>
         ) : (
-          <div className={`grid gap-8 items-stretch ${isCashFundEnabled && isStoreSectionEnabled ? "md:grid-cols-2" : "max-w-md mx-auto grid-cols-1"}`}>
+          <div className={`grid gap-6 lg:gap-8 items-stretch ${isCashFundEnabled && isStoreSectionEnabled ? "max-w-md mx-auto md:max-w-none md:grid-cols-2" : "max-w-md mx-auto grid-cols-1"}`}>
             {/* Card 1: Honeymoon Fund */}
             {isCashFundEnabled && (
               <motion.div
@@ -147,37 +121,36 @@ export default function Registry() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
                 viewport={{ once: true }}
-                className="h-full p-8 md:p-10 border border-cream/20 bg-charcoal/40 backdrop-blur-md rounded-sm text-center relative overflow-hidden group hover:border-terracotta/50 transition-all duration-500 flex flex-col justify-between"
+                className="h-full min-w-0 p-5 sm:p-6 lg:p-8 border border-cream/20 bg-charcoal/40 rounded-sm text-center relative overflow-hidden flex flex-col justify-between"
               >
                 <div className="relative z-10 flex-1 flex flex-col">
-                  <div className="w-14 h-14 mx-auto rounded-full bg-cream/10 border border-cream/20 flex items-center justify-center text-terracotta mb-6 group-hover:scale-105 transition-transform duration-300">
-                    <Heart size={24} strokeWidth={1.5} className="fill-current text-terracotta/40" />
+                  <div className="h-10 mx-auto flex items-center justify-center text-cream/80 mb-6">
+                    <Heart size={24} strokeWidth={1.5} aria-hidden="true" />
                   </div>
-                  <span className="font-sans text-[9px] uppercase tracking-[0.25em] text-terracotta font-semibold block mb-1">
+                  <span className="font-sans text-label uppercase tracking-label text-cream/90 font-semibold block mb-1">
                     {cashFund.tag || "Honeymoon Fund"}
                   </span>
-                  <h3 className="text-2xl md:text-3xl font-serif text-cream mb-2 tracking-wide">
+                  <h3 className="text-2xl md:text-3xl font-serif text-cream mb-2 tracking-normal text-balance">
                     {fundCard.title || cashFund.title || "Honeymoon Fund"}
                   </h3>
-                  <p className="font-sans text-xs md:text-sm text-cream/80 tracking-wide mb-6 leading-relaxed max-w-sm mx-auto min-h-[2.75rem] flex items-center justify-center">
+                  <p className="font-sans text-copy text-cream/80 tracking-normal mb-6 leading-relaxed max-w-sm mx-auto min-h-[2.75rem] flex items-center justify-center">
                     {fundCard.description || cashFund.description || "Contribute toward our getaway and the memories we’ll make together."}
                   </p>
 
                   {/* Prominent Live Running Total Display */}
-                  <div className="mt-auto mb-6 p-5 rounded-sm bg-cream/10 border border-cream/15 backdrop-blur-xs w-full max-w-xs mx-auto">
-                    <div className="flex items-center justify-center gap-1.5 mb-2 text-[9px] uppercase tracking-widest text-emerald-300 font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span>Live Fund Counter</span>
+                  <div className="mt-auto mb-6 pt-5 border-t border-cream/20 w-full max-w-xs mx-auto">
+                    <div className="flex items-center justify-center gap-1.5 mb-2 text-label uppercase tracking-label text-cream/90 font-semibold">
+                      <span>Fund Total</span>
                     </div>
                     <div className="text-3xl md:text-4xl font-serif text-cream font-medium h-10 flex items-baseline justify-center leading-none">
-                      $<AnimatedCounter value={totalRaised} />
+                      {fundStatus ? "—" : <>$<AnimatedCounter value={totalRaised} /></>}
                     </div>
-                    <div className="text-[10px] uppercase tracking-wider text-cream/60 mt-1.5">
-                      Contributed So Far
+                    <div className="text-label uppercase tracking-label text-cream/90 mt-1.5">
+                      {fundStatus || "Contributed So Far"}
                     </div>
 
-                    <div className="mt-3.5 pt-3.5 border-t border-cream/10">
-                      <div className="flex justify-between text-[10px] text-cream/70 mb-1.5">
+                    <div hidden={!!fundStatus} className="mt-5">
+                      <div className="flex justify-between text-label text-cream/90 mb-1.5">
                         <span>Progress</span>
                         <span>
                           {targetAmount > 0
@@ -200,10 +173,9 @@ export default function Registry() {
                 <div className="pt-2">
                   <Link
                     href="/registry/fund"
-                    className="w-full h-12 font-sans text-[10px] uppercase tracking-[0.2em] bg-terracotta text-cream px-8 rounded-sm hover:bg-cream hover:text-charcoal transition-colors font-medium shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full min-h-12 py-3 font-sans text-label uppercase tracking-label bg-action text-cream px-4 rounded-sm hover:bg-action-hover transition-colors font-medium shadow-card cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span>{fundCard.button_text || "Contribute to Honeymoon Fund"}</span>
-                    <Sparkles size={13} />
                   </Link>
                 </div>
               </motion.div>
@@ -216,38 +188,37 @@ export default function Registry() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
                 viewport={{ once: true }}
-                className="h-full p-8 md:p-10 border border-cream/20 bg-charcoal/40 backdrop-blur-md rounded-sm text-center relative overflow-hidden group hover:border-terracotta/50 transition-all duration-500 flex flex-col justify-between"
+                className="h-full min-w-0 p-5 sm:p-6 lg:p-8 border border-cream/20 bg-charcoal/40 rounded-sm text-center relative overflow-hidden flex flex-col justify-between"
               >
                 <div className="relative z-10 flex-1 flex flex-col">
-                  <div className="w-14 h-14 mx-auto rounded-full bg-cream/10 border border-cream/20 flex items-center justify-center text-terracotta mb-6 group-hover:scale-105 transition-transform duration-300">
-                    <Gift size={24} strokeWidth={1.5} />
+                  <div className="h-10 mx-auto flex items-center justify-center text-cream/80 mb-6">
+                    <Gift size={24} strokeWidth={1.5} aria-hidden="true" />
                   </div>
-                  <span className="font-sans text-[9px] uppercase tracking-[0.25em] text-terracotta font-semibold block mb-1">
+                  <span className="font-sans text-label uppercase tracking-label text-cream/90 font-semibold block mb-1">
                     Curated Wishlist
                   </span>
-                  <h3 className="text-2xl md:text-3xl font-serif text-cream mb-2 tracking-wide">
+                  <h3 className="text-2xl md:text-3xl font-serif text-cream mb-2 tracking-normal text-balance">
                     {storeCard.title || "Gift Registry"}
                   </h3>
-                  <p className="font-sans text-xs md:text-sm text-cream/80 tracking-wide mb-6 leading-relaxed max-w-sm mx-auto min-h-[2.75rem] flex items-center justify-center">
+                  <p className="font-sans text-copy text-cream/80 tracking-normal mb-6 leading-relaxed max-w-sm mx-auto min-h-[2.75rem] flex items-center justify-center">
                     {storeCard.description}
                   </p>
 
                   {/* Prominent Live Items Counter Display */}
-                  <div className="mt-auto mb-6 p-5 rounded-sm bg-cream/10 border border-cream/15 backdrop-blur-xs w-full max-w-xs mx-auto">
-                    <div className="flex items-center justify-center gap-1.5 mb-2 text-[9px] uppercase tracking-widest text-emerald-300 font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span>Live Registry Counter</span>
+                  <div className="mt-auto mb-6 pt-5 border-t border-cream/20 w-full max-w-xs mx-auto">
+                    <div className="flex items-center justify-center gap-1.5 mb-2 text-label uppercase tracking-label text-cream/90 font-semibold">
+                      <span>Wishlist Status</span>
                     </div>
                     <div className="text-3xl md:text-4xl font-serif text-cream font-medium h-10 flex items-baseline justify-center gap-1.5 leading-none">
                       <AnimatedCounter value={purchasedItemsCount} />
-                      <span className="text-xl md:text-2xl text-cream/70 font-normal">of {totalItemsCount}</span>
+                      <span className="text-xl md:text-2xl text-cream/90 font-normal">of {totalItemsCount}</span>
                     </div>
-                    <div className="text-[10px] uppercase tracking-wider text-cream/60 mt-1.5">
+                    <div className="text-label uppercase tracking-label text-cream/90 mt-1.5">
                       Gifts Purchased So Far
                     </div>
 
-                    <div className="mt-3.5 pt-3.5 border-t border-cream/10">
-                      <div className="flex justify-between text-[10px] text-cream/70 mb-1.5">
+                    <div className="mt-5">
+                      <div className="flex justify-between text-label text-cream/90 mb-1.5">
                         <span>Progress</span>
                         <span>{purchasedPercentage}% of Wishlist Claimed</span>
                       </div>
@@ -266,10 +237,9 @@ export default function Registry() {
                 <div className="pt-2">
                   <Link
                     href="/registry/items"
-                    className="w-full h-12 font-sans text-[10px] uppercase tracking-[0.2em] bg-terracotta text-cream px-8 rounded-sm hover:bg-cream hover:text-charcoal transition-colors font-medium shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full min-h-12 py-3 font-sans text-label uppercase tracking-label bg-action text-cream px-4 rounded-sm hover:bg-action-hover transition-colors font-medium shadow-card cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span>{storeCard.button_text || "View Registry Items"}</span>
-                    <ShoppingBag size={13} />
                   </Link>
                 </div>
               </motion.div>

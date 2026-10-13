@@ -1,6 +1,7 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { streamText, tool, stepCountIs, UIMessage, convertToModelMessages } from 'ai';
 import { z } from 'zod';
+import { apiFailure, ApiError } from '@/lib/serverDatabase';
 
 const google = createGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -30,35 +31,25 @@ Mandatory Rules:
 
 export async function POST(req: Request) {
   try {
+    if (!process.env.GEMINI_API_KEY || !process.env.NEXT_PUBLIC_MAPBOX_TOKEN) throw new ApiError('Map search is temporarily unavailable.');
     const { messages }: { messages: UIMessage[] } = await req.json();
-    console.log('=== MAP-CHAT REQUEST RECEIVED ===');
-    console.log('Messages count:', messages.length);
-    console.log('Last message:', JSON.stringify(messages[messages.length - 1], null, 2));
+    if (!Array.isArray(messages) || !messages.length || messages.length > 60 || JSON.stringify(messages).length > 64000) throw new ApiError('Please reset the conversation or shorten your message.', 400);
 
     const modelMessages = await convertToModelMessages(messages);
-    console.log('Converted model messages:', JSON.stringify(modelMessages, null, 2));
 
     const result = streamText({
       model: google('gemini-2.5-flash'),
       system: SYSTEM_PROMPT,
       messages: modelMessages,
+      abortSignal: req.signal,
       stopWhen: stepCountIs(5),
-      onStepFinish: (step) => {
-        console.log('=== MAP-CHAT STEP FINISH ===');
-        console.log('Finish Reason:', step.finishReason);
-        console.log('Step Text:', step.text);
-        console.log('Step Tool Calls:', JSON.stringify(step.toolCalls, null, 2));
-        console.log('Step Tool Results:', JSON.stringify(step.toolResults, null, 2));
-      },
       tools: {
         geocodePlaces: tool({
           description: 'Search for places and return their coordinates to plot on the map.',
-          parameters: z.object({
-            query: z.string().describe('The search query, e.g., "coffee shops near Indio CA"'),
+          inputSchema: z.object({
+            query: z.string().trim().min(1).max(300).describe('The search query, e.g., "coffee shops near Indio CA"'),
           }),
           execute: async ({ query }: { query: string }) => {
-            console.log('--- Executing geocodePlaces tool ---');
-            console.log('Query:', query);
             if (!query || !query.trim()) {
               console.warn('geocodePlaces received empty query');
               return { found: false, results: [], message: 'Query cannot be empty.' };
@@ -74,7 +65,8 @@ export async function POST(req: Request) {
             url.searchParams.append('proximity', '-116.237,33.682');
             url.searchParams.append('bbox', '-116.70,33.50,-116.10,33.90');
 
-            const response = await fetch(url.toString());
+            const response = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
+            if (!response.ok) throw new Error('Map service unavailable');
             const data = await response.json();
             
             if (!data.features || data.features.length === 0) {
@@ -91,19 +83,19 @@ export async function POST(req: Request) {
 
             return { found: true, results };
           },
-        } as any),
+        }),
         getDirections: tool({
           description: 'Fetch driving directions between any two points (by name or coordinates) and draw them on the map.',
-          parameters: z.object({
-            origin: z.string().describe('Name of the starting point, e.g., "Palm Springs Airport" or "Starbucks Palm Springs"'),
+          inputSchema: z.object({
+            origin: z.string().trim().min(1).max(300).describe('Name of the starting point, e.g., "Palm Springs Airport" or "Starbucks Palm Springs"'),
             originCoords: z.object({
-              lat: z.number(),
-              lng: z.number(),
+              lat: z.number().min(-90).max(90),
+              lng: z.number().min(-180).max(180),
             }).optional().describe('Coordinates of the start point if known'),
-            destination: z.string().describe('Name of the destination point, e.g., "The Bougainvillea Estate" or "JW Marriott"'),
+            destination: z.string().trim().min(1).max(300).describe('Name of the destination point, e.g., "The Bougainvillea Estate" or "JW Marriott"'),
             destCoords: z.object({
-              lat: z.number(),
-              lng: z.number(),
+              lat: z.number().min(-90).max(90),
+              lng: z.number().min(-180).max(180),
             }).optional().describe('Coordinates of the destination if known'),
           }),
           execute: async ({ origin, originCoords, destination, destCoords }: { 
@@ -112,8 +104,6 @@ export async function POST(req: Request) {
             destination: string;
             destCoords?: { lat: number; lng: number };
           }) => {
-            console.log('--- Executing getDirections tool ---');
-            console.log('Params:', { origin, originCoords, destination, destCoords });
             if (!origin || !origin.trim() || !destination || !destination.trim()) {
               console.warn('getDirections received empty parameters');
               return { found: false, message: 'Origin and destination cannot be empty.' };
@@ -128,7 +118,8 @@ export async function POST(req: Request) {
             if (!orig) {
               const url = `${MAPBOX_SEARCH_URL}?q=${encodeURIComponent(origin)}&access_token=${token}&limit=1&proximity=-116.237,33.682`;
               try {
-                const res = await fetch(url);
+                const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+                if (!res.ok) throw new Error('Map service unavailable');
                 const data = await res.json();
                 if (data.features && data.features.length > 0) {
                   orig = {
@@ -145,7 +136,8 @@ export async function POST(req: Request) {
             if (!dest) {
               const url = `${MAPBOX_SEARCH_URL}?q=${encodeURIComponent(destination)}&access_token=${token}&limit=1&proximity=-116.237,33.682`;
               try {
-                const res = await fetch(url);
+                const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+                if (!res.ok) throw new Error('Map service unavailable');
                 const data = await res.json();
                 if (data.features && data.features.length > 0) {
                   dest = {
@@ -168,7 +160,8 @@ export async function POST(req: Request) {
             const coordsString = `${orig.lng},${orig.lat};${dest.lng},${dest.lat}`;
             const url = `${MAPBOX_DIRECTIONS_URL}/${coordsString}?geometries=geojson&access_token=${token}`;
 
-            const response = await fetch(url);
+            const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+            if (!response.ok) throw new Error('Map service unavailable');
             const data = await response.json();
 
             if (!data.routes || data.routes.length === 0) {
@@ -187,16 +180,12 @@ export async function POST(req: Request) {
               destinationCoords: dest
             };
           }
-        } as any)
+        })
       }
     });
 
     return result.toUIMessageStreamResponse();
   } catch (error: any) {
-    console.error('MAP_CHAT_ERROR:', error);
-    return new Response(JSON.stringify({ error: error?.message || 'Unknown error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return apiFailure(error);
   }
 }

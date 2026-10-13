@@ -13,7 +13,7 @@ import FAQ from "@/components/FAQ";
 import DJLineup from "@/components/DJLineup";
 import NavigationTabs from "@/components/NavigationTabs";
 import { mockDatabase } from "@/lib/mockDatabase";
-import adminConfigDefault from "@config/ui/admin.json";
+import adminConfigDefault from "@/lib/publicAdminConfig";
 import Link from "next/link";
 import { Lock } from "lucide-react";
 

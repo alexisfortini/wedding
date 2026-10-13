@@ -22,6 +22,14 @@ To run the application, copy the template `.env.example` to `.env.local` and con
 
 The production site is containerized using a multi-stage Docker build and deployed to Google Cloud Run.
 
+### Guest-list connection failures
+
+If invitations cannot load, inspect the **Wedding** project in the Supabase dashboard first. A paused project can cause its API hostname to stop resolving. Resume the existing project; do not reset seeds or create a replacement database to address an outage. Wait for the project and its Data API to finish starting before retrying sign-in. During startup, gateway errors or a temporary schema-cache error can occur even while tables appear in the dashboard.
+
+The public URL and anonymous key must belong to the same project. The service-role/secret key is server-only. Next.js embeds public variables in browser builds, so changed credentials require restarting local development and an approved rebuild/deployment for production.
+
+Supabase's dashboard offers upgrading the free project to prevent future pauses. Plan or billing changes require the owner's approval. The application retries transient reads once; it does not automatically repeat database writes.
+
 ### The Deployment Script (`scripts/deploy.sh`)
 Running the script executes the complete build sequence:
 ```bash
