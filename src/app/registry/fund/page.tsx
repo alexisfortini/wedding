@@ -171,39 +171,37 @@ export default function HoneymoonFundPage() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>Live Running Total</span>
           </div>
-          <div className="text-4xl sm:text-5xl font-serif text-charcoal font-medium">
+          <div className="text-4xl sm:text-5xl font-serif text-charcoal font-medium h-12 flex items-baseline justify-center leading-none">
             $<AnimatedCounter value={totalRaised} />
           </div>
-          <div className="text-xs uppercase tracking-wider text-charcoal/50 mt-1">
+          <div className="text-xs uppercase tracking-wider text-charcoal/50 mt-1.5">
             Contributed So Far
           </div>
 
-          {targetAmount > 0 && (
-            <div className="mt-5 pt-5 border-t border-sage/15 max-w-md mx-auto">
-              <div className="flex justify-between text-xs text-charcoal/70 mb-1.5 font-medium">
-                <span>Goal: ${targetAmount.toLocaleString()}</span>
-                <span>{progressPercent}% Funded</span>
-              </div>
-              <div className="w-full h-2 bg-cream/70 rounded-full overflow-hidden border border-sage/15">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressPercent}%` }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
-                  className="h-full bg-terracotta rounded-full"
-                />
-              </div>
+          <div className="mt-5 pt-5 border-t border-sage/15 max-w-md mx-auto">
+            <div className="flex justify-between text-xs text-charcoal/70 mb-1.5 font-medium">
+              <span>Goal: ${(targetAmount || 5000).toLocaleString()}</span>
+              <span>{progressPercent}% Funded</span>
             </div>
-          )}
+            <div className="w-full h-2 bg-cream/70 rounded-full overflow-hidden border border-sage/15">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                className="h-full bg-terracotta rounded-full"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Main Content Grid: Payment Methods on Left, Self-Report on Right */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
           
           {/* LEFT: Payment Instructions (Venmo / Zelle) */}
-          <div className="lg:col-span-7 bg-white border border-sage/20 rounded-sm shadow-sm overflow-hidden flex flex-col">
+          <div className="h-full bg-white border border-sage/20 rounded-sm shadow-sm overflow-hidden flex flex-col">
             
             {/* Tab Selection */}
-            <div className="bg-cream/40 border-b border-sage/15 p-1.5 flex gap-1.5">
+            <div className="bg-cream/40 border-b border-sage/15 p-1.5 flex gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveTab("venmo")}
@@ -232,12 +230,15 @@ export default function HoneymoonFundPage() {
             </div>
 
             {/* Tab Content */}
-            <div className="p-6 sm:p-8 space-y-6">
+            <div className="p-6 sm:p-8 flex-1 flex flex-col">
               
               {/* TAB 1: VENMO */}
               {activeTab === "venmo" && (
-                <div className="space-y-6">
+                <div className="flex-1 flex flex-col justify-between space-y-6">
                   <div className="space-y-1">
+                    <span className="text-[10px] uppercase tracking-wider text-terracotta font-semibold block">
+                      Option 1
+                    </span>
                     <h3 className="text-2xl font-serif text-charcoal">Venmo</h3>
                     <p className="text-xs sm:text-sm font-sans text-charcoal/70 leading-relaxed">
                       Scan the QR code with your phone camera or app, or copy our handle below.
@@ -245,13 +246,13 @@ export default function HoneymoonFundPage() {
                   </div>
 
                   {/* QR Code Container */}
-                  <div className="bg-cream/30 border border-sage/20 p-6 rounded-sm text-center max-w-sm mx-auto shadow-2xs">
+                  <div className="flex-1 flex flex-col items-center justify-center bg-cream/30 border border-sage/20 p-6 rounded-sm text-center w-full shadow-2xs">
                     <div className="relative inline-block bg-white p-3 rounded-md border border-sage/20 shadow-xs mb-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={venmoQrImage}
                         alt="Venmo QR Code"
-                        className="w-48 h-48 sm:w-56 sm:h-56 object-contain mx-auto"
+                        className="w-48 h-48 sm:w-52 sm:h-52 object-contain mx-auto"
                       />
                     </div>
                     <div className="flex items-center justify-center gap-1.5 text-xs font-sans text-charcoal/60">
@@ -261,8 +262,8 @@ export default function HoneymoonFundPage() {
                   </div>
 
                   {/* Handle & Deep Link */}
-                  <div className="space-y-3 max-w-sm mx-auto">
-                    <div className="flex items-center justify-between bg-cream/30 border border-sage/20 p-3 rounded-sm">
+                  <div className="space-y-3 w-full">
+                    <div className="flex items-center justify-between bg-cream/30 border border-sage/20 p-3.5 rounded-sm">
                       <div>
                         <span className="block text-[9px] uppercase tracking-widest text-charcoal/50 font-semibold">Venmo Handle</span>
                         <span className="font-mono text-sm font-bold text-charcoal">@{cleanVenmoHandle}</span>
@@ -290,7 +291,7 @@ export default function HoneymoonFundPage() {
                       href={venmoDeepLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full font-sans text-xs uppercase tracking-[0.2em] bg-terracotta text-cream py-3.5 rounded-sm hover:bg-charcoal transition-colors font-semibold shadow-sm flex items-center justify-center gap-2 group cursor-pointer"
+                      className="w-full h-12 font-sans text-xs uppercase tracking-[0.2em] bg-terracotta text-cream rounded-sm hover:bg-charcoal transition-colors font-semibold shadow-sm flex items-center justify-center gap-2 group cursor-pointer"
                     >
                       <Smartphone size={15} />
                       <span>Open in Venmo App</span>
@@ -302,30 +303,33 @@ export default function HoneymoonFundPage() {
 
               {/* TAB 2: ZELLE */}
               {activeTab === "zelle" && (
-                <div className="space-y-6">
+                <div className="flex-1 flex flex-col justify-between space-y-6">
                   <div className="space-y-1">
+                    <span className="text-[10px] uppercase tracking-wider text-terracotta font-semibold block">
+                      Option 2
+                    </span>
                     <h3 className="text-2xl font-serif text-charcoal">Zelle</h3>
                     <p className="text-xs sm:text-sm font-sans text-charcoal/70 leading-relaxed">
                       Send directly with 0% transaction fees using your mobile banking app (Chase, BoA, Wells Fargo, etc.) or the Zelle app.
                     </p>
                   </div>
 
-                  <div className="bg-cream/30 border border-sage/20 p-6 rounded-sm space-y-4 max-w-sm mx-auto shadow-2xs">
+                  <div className="flex-1 flex flex-col justify-center bg-cream/30 border border-sage/20 p-6 rounded-sm space-y-5 w-full shadow-2xs">
                     <div>
                       <span className="block text-[9px] uppercase tracking-widest text-charcoal/50 font-semibold mb-1">Recipient Name</span>
                       <p className="font-serif text-lg text-charcoal font-medium">{zelleRecipient || "Alexis Fortini"}</p>
                     </div>
 
                     {zelleEmail && (
-                      <div className="pt-3 border-t border-sage/15 flex items-center justify-between">
-                        <div>
+                      <div className="pt-4 border-t border-sage/15 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
                           <span className="block text-[9px] uppercase tracking-widest text-charcoal/50 font-semibold">Registered Email</span>
-                          <span className="font-mono text-xs font-semibold text-charcoal">{zelleEmail}</span>
+                          <span className="font-mono text-xs sm:text-sm font-semibold text-charcoal truncate block">{zelleEmail}</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleCopy(zelleEmail, "zelle-email")}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium rounded bg-white border border-sage/25 text-charcoal hover:bg-cream/40 transition-colors cursor-pointer"
+                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium rounded bg-white border border-sage/25 text-charcoal hover:bg-cream/40 transition-colors cursor-pointer"
                         >
                           {copiedKey === "zelle-email" ? (
                             <>
@@ -343,15 +347,15 @@ export default function HoneymoonFundPage() {
                     )}
 
                     {zellePhone && (
-                      <div className="pt-3 border-t border-sage/15 flex items-center justify-between">
+                      <div className="pt-4 border-t border-sage/15 flex items-center justify-between gap-2">
                         <div>
                           <span className="block text-[9px] uppercase tracking-widest text-charcoal/50 font-semibold">Registered Phone</span>
-                          <span className="font-mono text-xs font-semibold text-charcoal">{zellePhone}</span>
+                          <span className="font-mono text-xs sm:text-sm font-semibold text-charcoal">{zellePhone}</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleCopy(zellePhone, "zelle-phone")}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium rounded bg-white border border-sage/25 text-charcoal hover:bg-cream/40 transition-colors cursor-pointer"
+                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium rounded bg-white border border-sage/25 text-charcoal hover:bg-cream/40 transition-colors cursor-pointer"
                         >
                           {copiedKey === "zelle-phone" ? (
                             <>
@@ -368,7 +372,7 @@ export default function HoneymoonFundPage() {
                       </div>
                     )}
 
-                    <div className="pt-3 border-t border-sage/15 text-xs font-sans text-charcoal/70">
+                    <div className="pt-4 border-t border-sage/15 text-xs font-sans text-charcoal/70">
                       <span className="font-semibold text-charcoal">Memo / Note:</span> Honeymoon Fund
                     </div>
                   </div>
@@ -379,160 +383,171 @@ export default function HoneymoonFundPage() {
           </div>
 
           {/* RIGHT: Self-Report / Confirmation Form */}
-          <div className="lg:col-span-5 bg-white border border-sage/20 rounded-sm p-6 sm:p-8 shadow-sm">
-            {reportSuccess ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="py-8 text-center space-y-4"
-              >
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
-                  <CheckCircle2 size={32} />
-                </div>
-                <h3 className="text-2xl font-serif text-charcoal">Thank You So Much, {reportName}!</h3>
-                <p className="text-sm font-sans text-charcoal/80 leading-relaxed">
-                  Your generous contribution of <span className="font-semibold text-terracotta">${reportAmount}</span> has been recorded and added to our live honeymoon counter.
-                </p>
-                <p className="text-xs font-serif italic text-charcoal/60">
-                  We are so deeply grateful for your love and support, and cannot wait to celebrate together! 🌴🥂
-                </p>
+          <div className="h-full bg-white border border-sage/20 rounded-sm shadow-sm overflow-hidden flex flex-col">
+            <div className="bg-cream/40 border-b border-sage/15 p-1.5 flex items-center justify-center shrink-0">
+              <div className="py-2.5 px-4 text-xs font-sans uppercase tracking-wider text-charcoal font-semibold flex items-center gap-2">
+                <Heart size={14} className="text-terracotta fill-current" />
+                <span>Gift Confirmation</span>
+              </div>
+            </div>
 
-                <div className="pt-4 flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={resetReportForm}
-                    className="w-full py-2.5 bg-cream/40 border border-sage/30 text-charcoal text-xs uppercase tracking-wider font-semibold rounded-sm hover:bg-cream/70 transition-colors cursor-pointer"
-                  >
-                    Record Another Gift
-                  </button>
-                  <Link
-                    href="/#registry"
-                    className="w-full py-2.5 bg-terracotta text-cream text-xs uppercase tracking-wider font-semibold rounded-sm hover:bg-charcoal transition-colors text-center"
-                  >
-                    Return to Wedding Site
-                  </Link>
-                </div>
-              </motion.div>
-            ) : (
-              <form onSubmit={handleSubmitContribution} className="space-y-5">
-                <div className="space-y-1">
-                  <span className="text-[10px] uppercase tracking-wider text-terracotta font-semibold block">
-                    Sent Your Gift?
-                  </span>
-                  <h3 className="text-2xl font-serif text-charcoal">Record Your Gift</h3>
-                  <p className="text-xs font-sans text-charcoal/70 leading-relaxed">
-                    Let us know so we can update our live counter and send our warmest thanks.
+            <div className="p-6 sm:p-8 flex-1 flex flex-col">
+              {reportSuccess ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex-1 flex flex-col items-center justify-center py-8 text-center space-y-4"
+                >
+                  <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
+                    <CheckCircle2 size={32} />
+                  </div>
+                  <h3 className="text-2xl font-serif text-charcoal">Thank You So Much, {reportName}!</h3>
+                  <p className="text-sm font-sans text-charcoal/80 leading-relaxed max-w-sm">
+                    Your generous contribution of <span className="font-semibold text-terracotta">${reportAmount}</span> has been recorded and added to our live honeymoon counter.
                   </p>
-                </div>
+                  <p className="text-xs font-serif italic text-charcoal/60 max-w-sm">
+                    We are so deeply grateful for your love and support, and cannot wait to celebrate together! 🌴🥂
+                  </p>
 
-                {reportErrorMessage && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-sm">
-                    {reportErrorMessage}
+                  <div className="pt-4 flex flex-col gap-2.5 w-full">
+                    <button
+                      type="button"
+                      onClick={resetReportForm}
+                      className="w-full h-11 bg-cream/40 border border-sage/30 text-charcoal text-xs uppercase tracking-wider font-semibold rounded-sm hover:bg-cream/70 transition-colors cursor-pointer"
+                    >
+                      Record Another Gift
+                    </button>
+                    <Link
+                      href="/#registry"
+                      className="w-full h-12 bg-terracotta text-cream text-xs uppercase tracking-wider font-semibold rounded-sm hover:bg-charcoal transition-colors flex items-center justify-center"
+                    >
+                      Return to Wedding Site
+                    </Link>
                   </div>
-                )}
-
-                <div className="space-y-4">
-                  {/* Guest Name */}
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1 font-semibold">
-                      Your Name(s) <span className="text-terracotta">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={reportName}
-                      onChange={(e) => setReportName(e.target.value)}
-                      placeholder="e.g. Alexis & Kelsey or The Smith Family"
-                      className="w-full border border-sage/30 p-2.5 text-sm bg-white rounded-sm outline-none focus:border-terracotta transition-colors"
-                    />
-                  </div>
-
-                  {/* Amount */}
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1 font-semibold">
-                      Contribution Amount ($) <span className="text-terracotta">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-charcoal/40 font-serif text-base">$</span>
-                      <input
-                        type="number"
-                        required
-                        min="1"
-                        step="any"
-                        value={reportAmount}
-                        onChange={(e) => setReportAmount(e.target.value)}
-                        placeholder="100"
-                        className="w-full border border-sage/30 pl-8 pr-3 p-2.5 text-sm bg-white rounded-sm outline-none focus:border-terracotta font-mono font-semibold"
-                      />
+                </motion.div>
+              ) : (
+                <form onSubmit={handleSubmitContribution} className="flex-1 flex flex-col justify-between space-y-5">
+                  <div className="space-y-5">
+                    <div className="space-y-1">
+                      <span className="text-[10px] uppercase tracking-wider text-terracotta font-semibold block">
+                        Sent Your Gift?
+                      </span>
+                      <h3 className="text-2xl font-serif text-charcoal">Record Your Gift</h3>
+                      <p className="text-xs sm:text-sm font-sans text-charcoal/70 leading-relaxed">
+                        Let us know so we can update our live counter and send our warmest thanks.
+                      </p>
                     </div>
-                    {/* Quick picks */}
-                    <div className="flex gap-2 mt-2">
-                      {["50", "100", "200", "500"].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setReportAmount(preset)}
-                          className="text-xs font-mono px-2.5 py-1 rounded bg-cream/40 border border-sage/20 hover:border-terracotta text-charcoal/80 cursor-pointer transition-colors"
-                        >
-                          +${preset}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Payment Method */}
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">
-                      Payment Method <span className="text-terracotta">*</span>
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(["venmo", "zelle", "cash"] as const).map((method) => (
-                        <button
-                          key={method}
-                          type="button"
-                          onClick={() => {
-                            setReportMethod(method);
-                            if (method === "venmo" || method === "zelle") {
-                              setActiveTab(method);
-                            }
-                          }}
-                          className={`py-2 px-2 text-xs uppercase tracking-wider font-semibold rounded-sm border transition-all cursor-pointer flex items-center justify-center ${
-                            reportMethod === method
-                              ? "bg-terracotta text-cream border-terracotta shadow-xs"
-                              : "bg-cream/20 text-charcoal/70 border-sage/20 hover:bg-cream/40"
-                          }`}
-                        >
-                          {method === "venmo" && "Venmo"}
-                          {method === "zelle" && "Zelle"}
-                          {method === "cash" && "Cash / Check"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                    {reportErrorMessage && (
+                      <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-sm">
+                        {reportErrorMessage}
+                      </div>
+                    )}
 
-                  {/* Note */}
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1 font-semibold">
-                      Note <span className="text-charcoal/30 font-normal">(Optional)</span>
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={reportNote}
-                      onChange={(e) => setReportNote(e.target.value)}
-                      placeholder="Write a personal note for Alexis & Kelsey..."
-                      className="w-full border border-sage/30 p-2.5 text-sm bg-white rounded-sm outline-none focus:border-terracotta resize-none transition-colors"
-                    />
-                    <p className="text-[11px] font-sans text-charcoal/50 italic flex items-center gap-1.5 pt-1.5">
-                      <ShieldCheck size={14} className="text-emerald-700 shrink-0" />
-                      <span>Your gift amount and note are kept strictly private between you and the couple.</span>
-                    </p>
+                    <div className="space-y-4">
+                      {/* Guest Name */}
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">
+                          Your Name(s) <span className="text-terracotta">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={reportName}
+                          onChange={(e) => setReportName(e.target.value)}
+                          placeholder="e.g. Alexis & Kelsey or The Smith Family"
+                          className="w-full h-11 border border-sage/30 px-3 text-sm bg-white rounded-sm outline-none focus:border-terracotta transition-colors"
+                        />
+                      </div>
+
+                      {/* Amount */}
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">
+                          Contribution Amount ($) <span className="text-terracotta">*</span>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2.5 text-charcoal/40 font-serif text-base">$</span>
+                          <input
+                            type="number"
+                            required
+                            min="1"
+                            step="any"
+                            value={reportAmount}
+                            onChange={(e) => setReportAmount(e.target.value)}
+                            placeholder="100"
+                            className="w-full h-11 border border-sage/30 pl-8 pr-3 text-sm bg-white rounded-sm outline-none focus:border-terracotta font-mono font-semibold"
+                          />
+                        </div>
+                        {/* Quick picks */}
+                        <div className="grid grid-cols-4 gap-2 mt-2">
+                          {["50", "100", "200", "500"].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => setReportAmount(preset)}
+                              className="text-xs font-mono py-1.5 rounded-sm bg-cream/40 border border-sage/20 hover:border-terracotta text-charcoal/80 cursor-pointer transition-colors text-center"
+                            >
+                              +${preset}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Payment Method */}
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">
+                          Payment Method <span className="text-terracotta">*</span>
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(["venmo", "zelle", "cash"] as const).map((method) => (
+                            <button
+                              key={method}
+                              type="button"
+                              onClick={() => {
+                                setReportMethod(method);
+                                if (method === "venmo" || method === "zelle") {
+                                  setActiveTab(method);
+                                }
+                              }}
+                              className={`h-10 px-2 text-xs uppercase tracking-wider font-semibold rounded-sm border transition-all cursor-pointer flex items-center justify-center ${
+                                reportMethod === method
+                                  ? "bg-terracotta text-cream border-terracotta shadow-xs"
+                                  : "bg-cream/20 text-charcoal/70 border-sage/20 hover:bg-cream/40"
+                              }`}
+                            >
+                              {method === "venmo" && "Venmo"}
+                              {method === "zelle" && "Zelle"}
+                              {method === "cash" && "Cash / Check"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Note */}
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-widest text-charcoal/50 mb-1.5 font-semibold">
+                          Note <span className="text-charcoal/30 font-normal">(Optional)</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={reportNote}
+                          onChange={(e) => setReportNote(e.target.value)}
+                          placeholder="Write a personal note for Alexis & Kelsey..."
+                          className="w-full border border-sage/30 p-3 text-sm bg-white rounded-sm outline-none focus:border-terracotta resize-none transition-colors"
+                        />
+                        <p className="text-[11px] font-sans text-charcoal/50 italic flex items-center gap-1.5 pt-1.5">
+                          <ShieldCheck size={14} className="text-emerald-700 shrink-0" />
+                          <span>Your gift amount and note are kept strictly private between you and the couple.</span>
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={isSubmittingReport}
-                    className="w-full font-sans text-xs uppercase tracking-[0.2em] bg-terracotta text-cream py-3.5 rounded-sm hover:bg-charcoal transition-colors font-semibold shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full h-12 font-sans text-xs uppercase tracking-[0.2em] bg-terracotta text-cream rounded-sm hover:bg-charcoal transition-colors font-semibold shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                   >
                     {isSubmittingReport ? (
                       <>
@@ -546,9 +561,9 @@ export default function HoneymoonFundPage() {
                       </>
                     )}
                   </button>
-                </div>
-              </form>
-            )}
+                </form>
+              )}
+            </div>
           </div>
 
         </div>

@@ -183,35 +183,33 @@ export default function RegistryItemsPage() {
         </div>
 
         {/* Live Items Counter Banner */}
-        <div className="bg-white border border-sage/20 rounded-sm p-6 shadow-sm text-center max-w-xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-sans uppercase tracking-wider font-semibold mb-2">
+        <div className="bg-white border border-sage/20 rounded-sm p-6 sm:p-8 shadow-sm text-center max-w-xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-sans uppercase tracking-wider font-semibold mb-3">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>Live Wishlist Status</span>
           </div>
-          <div className="text-3xl sm:text-4xl font-serif text-charcoal font-medium">
-            <AnimatedCounter value={purchasedItemsCount} />{" "}
+          <div className="text-4xl sm:text-5xl font-serif text-charcoal font-medium h-12 flex items-baseline justify-center gap-1.5 leading-none">
+            <AnimatedCounter value={purchasedItemsCount} />
             <span className="text-xl sm:text-2xl text-charcoal/60 font-normal">of {totalItemsCount}</span>
           </div>
-          <div className="text-xs uppercase tracking-wider text-charcoal/50 mt-1">
+          <div className="text-xs uppercase tracking-wider text-charcoal/50 mt-1.5">
             Gifts Claimed So Far
           </div>
 
-          {totalItemsCount > 0 && (
-            <div className="mt-4 pt-4 border-t border-sage/15 max-w-md mx-auto">
-              <div className="flex justify-between text-xs text-charcoal/70 mb-1.5 font-medium">
-                <span>Progress</span>
-                <span>{purchasedPercentage}% of Wishlist Claimed</span>
-              </div>
-              <div className="w-full h-2 bg-cream/70 rounded-full overflow-hidden border border-sage/15">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${purchasedPercentage}%` }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
-                  className="h-full bg-terracotta rounded-full"
-                />
-              </div>
+          <div className="mt-5 pt-5 border-t border-sage/15 max-w-md mx-auto">
+            <div className="flex justify-between text-xs text-charcoal/70 mb-1.5 font-medium">
+              <span>Progress</span>
+              <span>{purchasedPercentage}% of Wishlist Claimed</span>
             </div>
-          )}
+            <div className="w-full h-2 bg-cream/70 rounded-full overflow-hidden border border-sage/15">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${purchasedPercentage}%` }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                className="h-full bg-terracotta rounded-full"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Category Filters */}
@@ -248,21 +246,22 @@ export default function RegistryItemsPage() {
               <span className="text-xs font-sans text-charcoal/50">Direct Links to Stores</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
               {filteredItems.map((item: any) => {
                 const isPurchased = Boolean(item.is_purchased);
                 const storeName = item.store_name || item.store || "Store Registry";
                 const itemLink = item.item_url || item.url || "#";
+                const itemDescription = item.description || item.notes || "";
 
                 return (
                   <div
                     key={item.id || item.title}
-                    className={`bg-white border border-sage/20 rounded-sm flex flex-col justify-between overflow-hidden transition-all duration-300 hover:border-terracotta/40 hover:shadow-md group ${
+                    className={`h-full bg-white border border-sage/20 rounded-sm flex flex-col justify-between overflow-hidden transition-all duration-300 hover:border-terracotta/40 hover:shadow-md group ${
                       isPurchased ? "bg-cream/10" : ""
                     }`}
                   >
                     {/* Top Image Container */}
-                    <div className="relative aspect-square w-full bg-cream/30 overflow-hidden border-b border-sage/15 flex items-center justify-center">
+                    <div className="relative aspect-square w-full shrink-0 bg-cream/30 overflow-hidden border-b border-sage/15 flex items-center justify-center">
                       {item.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -295,65 +294,58 @@ export default function RegistryItemsPage() {
                       )}
                     </div>
 
-                    {/* Middle: Title, Notes & Price */}
-                    <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                    {/* Middle: Title, Description & Price */}
+                    <div className="p-5 flex-1 flex flex-col justify-between">
                       <div>
-                        <h4 className="font-serif text-lg text-charcoal leading-snug group-hover:text-terracotta transition-colors">
+                        <h4 className="font-serif text-lg text-charcoal leading-snug group-hover:text-terracotta transition-colors line-clamp-2 min-h-[2.75rem]">
                           {item.title}
                         </h4>
-                        {item.notes && (
-                          <p className="font-sans text-xs text-charcoal/60 mt-1 line-clamp-2 leading-relaxed">
-                            {item.notes}
-                          </p>
-                        )}
+                        <p className="font-sans text-xs text-charcoal/60 mt-1.5 line-clamp-2 min-h-[2.25rem] leading-relaxed">
+                          {itemDescription}
+                        </p>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs font-sans pt-2 border-t border-sage/10">
-                        {item.price && (
-                          <span className="font-mono font-semibold text-charcoal">
-                            {item.price.startsWith("$") ? item.price : `$${item.price}`}
-                          </span>
-                        )}
-                        {item.category && (
-                          <span className="text-[10px] uppercase tracking-wider text-charcoal/40 font-medium">
-                            {item.category}
-                          </span>
-                        )}
+                      <div className="flex items-center justify-between text-xs font-sans pt-3 mt-3 border-t border-sage/10">
+                        <span className="font-mono font-semibold text-charcoal">
+                          {item.price ? (item.price.startsWith("$") ? item.price : `$${item.price}`) : ""}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-wider text-charcoal/40 font-medium">
+                          {item.category || ""}
+                        </span>
                       </div>
                     </div>
 
                     {/* Bottom: Action Buttons */}
                     <div className="p-5 pt-0">
                       {isPurchased ? (
-                        <div className="space-y-2">
-                          <div className="p-2.5 bg-emerald-50/60 border border-emerald-200/60 rounded-sm text-center">
-                            <span className="text-xs font-serif italic text-emerald-800">
-                              {item.purchased_by
-                                ? `Gifted by ${item.purchased_by} ❤️`
-                                : "Marked as purchased by a guest"}
-                            </span>
-                          </div>
+                        <div className="h-10 px-3 bg-emerald-50/70 border border-emerald-200/70 rounded-sm flex items-center justify-between gap-2">
+                          <span className="text-xs font-serif italic text-emerald-800 truncate">
+                            {item.purchased_by
+                              ? `Gifted by ${item.purchased_by} ❤️`
+                              : "Marked as purchased"}
+                          </span>
                           {itemLink && itemLink !== "#" && (
                             <a
                               href={itemLink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="w-full text-center block text-[10px] uppercase tracking-wider text-charcoal/50 hover:text-charcoal py-1 transition-colors"
+                              className="shrink-0 text-[10px] uppercase tracking-wider text-emerald-800/70 hover:text-emerald-950 font-sans font-semibold transition-colors flex items-center gap-1"
                             >
-                              View Item Details ↗
+                              <span>View</span>
+                              <ExternalLink size={11} />
                             </a>
                           )}
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="grid grid-cols-2 gap-2 h-10">
                           <a
                             href={itemLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 font-sans text-[11px] uppercase tracking-wider bg-terracotta text-cream py-2.5 px-3 rounded-sm hover:bg-charcoal transition-colors font-medium text-center flex items-center justify-center gap-1.5 shadow-2xs group/btn"
+                            className="h-full font-sans text-[10px] uppercase tracking-wider bg-terracotta text-cream px-3 rounded-sm hover:bg-charcoal transition-colors font-semibold text-center flex items-center justify-center gap-1.5 shadow-2xs group/btn whitespace-nowrap"
                           >
-                            <span>Buy at {storeName}</span>
-                            <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                            <span>View & Buy</span>
+                            <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 transition-transform shrink-0" />
                           </a>
 
                           <button
@@ -361,7 +353,7 @@ export default function RegistryItemsPage() {
                             onClick={() => {
                               setClaimingItem(item);
                             }}
-                            className="font-sans text-[10px] uppercase tracking-wider bg-cream/30 hover:bg-cream/80 text-charcoal border border-sage/25 py-2.5 px-3 rounded-sm transition-colors font-medium whitespace-nowrap cursor-pointer"
+                            className="h-full font-sans text-[10px] uppercase tracking-wider bg-cream/30 hover:bg-cream/80 text-charcoal border border-sage/25 px-3 rounded-sm transition-colors font-semibold whitespace-nowrap cursor-pointer flex items-center justify-center"
                             title="Let us know you purchased this so others don't buy duplicate gifts"
                           >
                             Mark Claimed
@@ -386,17 +378,17 @@ export default function RegistryItemsPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-stretch">
               {storesList.map((store: any) => (
                 <a
                   key={store.name || store.url}
                   href={store.url || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-5 bg-white border border-sage/20 rounded-sm hover:border-terracotta/50 hover:shadow-md transition-all flex items-center justify-between group"
+                  className="h-full min-h-[84px] p-5 bg-white border border-sage/20 rounded-sm hover:border-terracotta/50 hover:shadow-md transition-all flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-cream/40 flex items-center justify-center text-charcoal/70 group-hover:text-terracotta transition-colors">
+                    <div className="w-10 h-10 shrink-0 rounded-full bg-cream/40 flex items-center justify-center text-charcoal/70 group-hover:text-terracotta transition-colors">
                       <ShoppingBag size={18} />
                     </div>
                     <div>
@@ -408,7 +400,7 @@ export default function RegistryItemsPage() {
                       </span>
                     </div>
                   </div>
-                  <ExternalLink size={14} className="text-charcoal/40 group-hover:text-terracotta group-hover:translate-x-0.5 transition-all" />
+                  <ExternalLink size={14} className="shrink-0 text-charcoal/40 group-hover:text-terracotta group-hover:translate-x-0.5 transition-all" />
                 </a>
               ))}
             </div>

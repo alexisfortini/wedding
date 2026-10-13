@@ -139,7 +139,7 @@ export default function Registry() {
             </p>
           </motion.div>
         ) : (
-          <div className={`grid gap-8 ${isCashFundEnabled && isStoreSectionEnabled ? "md:grid-cols-2" : "max-w-md mx-auto grid-cols-1"}`}>
+          <div className={`grid gap-8 items-stretch ${isCashFundEnabled && isStoreSectionEnabled ? "md:grid-cols-2" : "max-w-md mx-auto grid-cols-1"}`}>
             {/* Card 1: Honeymoon Fund */}
             {isCashFundEnabled && (
               <motion.div
@@ -147,9 +147,9 @@ export default function Registry() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
                 viewport={{ once: true }}
-                className="p-8 md:p-10 border border-cream/20 bg-charcoal/40 backdrop-blur-md rounded-sm text-center relative overflow-hidden group hover:border-terracotta/50 transition-all duration-500 flex flex-col justify-between"
+                className="h-full p-8 md:p-10 border border-cream/20 bg-charcoal/40 backdrop-blur-md rounded-sm text-center relative overflow-hidden group hover:border-terracotta/50 transition-all duration-500 flex flex-col justify-between"
               >
-                <div className="relative z-10">
+                <div className="relative z-10 flex-1 flex flex-col">
                   <div className="w-14 h-14 mx-auto rounded-full bg-cream/10 border border-cream/20 flex items-center justify-center text-terracotta mb-6 group-hover:scale-105 transition-transform duration-300">
                     <Heart size={24} strokeWidth={1.5} className="fill-current text-terracotta/40" />
                   </div>
@@ -159,46 +159,48 @@ export default function Registry() {
                   <h3 className="text-2xl md:text-3xl font-serif text-cream mb-2 tracking-wide">
                     {fundCard.title || cashFund.title || "Honeymoon Fund"}
                   </h3>
-                  <p className="font-sans text-xs md:text-sm text-cream/80 tracking-wide mb-6 leading-relaxed max-w-sm mx-auto">
+                  <p className="font-sans text-xs md:text-sm text-cream/80 tracking-wide mb-6 leading-relaxed max-w-sm mx-auto min-h-[2.75rem] flex items-center justify-center">
                     {fundCard.description || cashFund.description || "Contribute toward our getaway and the memories we’ll make together."}
                   </p>
 
                   {/* Prominent Live Running Total Display */}
-                  <div className="my-5 p-4 rounded-sm bg-cream/10 border border-cream/15 backdrop-blur-xs max-w-xs mx-auto">
-                    <div className="flex items-center justify-center gap-1.5 mb-1.5 text-[9px] uppercase tracking-widest text-emerald-300 font-semibold">
+                  <div className="mt-auto mb-6 p-5 rounded-sm bg-cream/10 border border-cream/15 backdrop-blur-xs w-full max-w-xs mx-auto">
+                    <div className="flex items-center justify-center gap-1.5 mb-2 text-[9px] uppercase tracking-widest text-emerald-300 font-semibold">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                       <span>Live Fund Counter</span>
                     </div>
-                    <div className="text-3xl md:text-4xl font-serif text-cream font-medium">
+                    <div className="text-3xl md:text-4xl font-serif text-cream font-medium h-10 flex items-baseline justify-center leading-none">
                       $<AnimatedCounter value={totalRaised} />
                     </div>
-                    <div className="text-[10px] uppercase tracking-wider text-cream/60 mt-1">
+                    <div className="text-[10px] uppercase tracking-wider text-cream/60 mt-1.5">
                       Contributed So Far
                     </div>
 
-                    {targetAmount > 0 && (
-                      <div className="mt-3 pt-3 border-t border-cream/10">
-                        <div className="flex justify-between text-[10px] text-cream/70 mb-1">
-                          <span>Progress</span>
-                          <span>{Math.min(Math.round((totalRaised / targetAmount) * 100), 100)}% of ${targetAmount.toLocaleString()} Goal</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-cream/20 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${Math.min((totalRaised / targetAmount) * 100, 100)}%` }}
-                            transition={{ duration: 1.2, ease: "easeOut" }}
-                            className="h-full bg-terracotta rounded-full"
-                          />
-                        </div>
+                    <div className="mt-3.5 pt-3.5 border-t border-cream/10">
+                      <div className="flex justify-between text-[10px] text-cream/70 mb-1.5">
+                        <span>Progress</span>
+                        <span>
+                          {targetAmount > 0
+                            ? `${Math.min(Math.round((totalRaised / targetAmount) * 100), 100)}% of $${targetAmount.toLocaleString()} Goal`
+                            : `$${totalRaised.toLocaleString()} Raised`}
+                        </span>
                       </div>
-                    )}
+                      <div className="w-full h-1.5 bg-cream/20 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${targetAmount > 0 ? Math.min((totalRaised / targetAmount) * 100, 100) : 100}%` }}
+                          transition={{ duration: 1.2, ease: "easeOut" }}
+                          className="h-full bg-terracotta rounded-full"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <div className="pt-2">
                   <Link
                     href="/registry/fund"
-                    className="w-full font-sans text-[10px] uppercase tracking-[0.2em] bg-terracotta text-cream px-8 py-3.5 rounded-sm hover:bg-cream hover:text-charcoal transition-colors font-medium shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full h-12 font-sans text-[10px] uppercase tracking-[0.2em] bg-terracotta text-cream px-8 rounded-sm hover:bg-cream hover:text-charcoal transition-colors font-medium shadow-sm cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span>{fundCard.button_text || "Contribute to Honeymoon Fund"}</span>
                     <Sparkles size={13} />
@@ -214,9 +216,9 @@ export default function Registry() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
                 viewport={{ once: true }}
-                className="p-8 md:p-10 border border-cream/20 bg-charcoal/40 backdrop-blur-md rounded-sm text-center relative overflow-hidden group hover:border-terracotta/50 transition-all duration-500 flex flex-col justify-between"
+                className="h-full p-8 md:p-10 border border-cream/20 bg-charcoal/40 backdrop-blur-md rounded-sm text-center relative overflow-hidden group hover:border-terracotta/50 transition-all duration-500 flex flex-col justify-between"
               >
-                <div className="relative z-10">
+                <div className="relative z-10 flex-1 flex flex-col">
                   <div className="w-14 h-14 mx-auto rounded-full bg-cream/10 border border-cream/20 flex items-center justify-center text-terracotta mb-6 group-hover:scale-105 transition-transform duration-300">
                     <Gift size={24} strokeWidth={1.5} />
                   </div>
@@ -226,47 +228,45 @@ export default function Registry() {
                   <h3 className="text-2xl md:text-3xl font-serif text-cream mb-2 tracking-wide">
                     {storeCard.title || "Gift Registry"}
                   </h3>
-                  <p className="font-sans text-xs md:text-sm text-cream/80 tracking-wide mb-6 leading-relaxed max-w-sm mx-auto">
+                  <p className="font-sans text-xs md:text-sm text-cream/80 tracking-wide mb-6 leading-relaxed max-w-sm mx-auto min-h-[2.75rem] flex items-center justify-center">
                     {storeCard.description}
                   </p>
 
                   {/* Prominent Live Items Counter Display */}
-                  <div className="my-5 p-4 rounded-sm bg-cream/10 border border-cream/15 backdrop-blur-xs max-w-xs mx-auto">
-                    <div className="flex items-center justify-center gap-1.5 mb-1.5 text-[9px] uppercase tracking-widest text-emerald-300 font-semibold">
+                  <div className="mt-auto mb-6 p-5 rounded-sm bg-cream/10 border border-cream/15 backdrop-blur-xs w-full max-w-xs mx-auto">
+                    <div className="flex items-center justify-center gap-1.5 mb-2 text-[9px] uppercase tracking-widest text-emerald-300 font-semibold">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                       <span>Live Registry Counter</span>
                     </div>
-                    <div className="text-3xl md:text-4xl font-serif text-cream font-medium">
-                      <AnimatedCounter value={purchasedItemsCount} />{" "}
+                    <div className="text-3xl md:text-4xl font-serif text-cream font-medium h-10 flex items-baseline justify-center gap-1.5 leading-none">
+                      <AnimatedCounter value={purchasedItemsCount} />
                       <span className="text-xl md:text-2xl text-cream/70 font-normal">of {totalItemsCount}</span>
                     </div>
-                    <div className="text-[10px] uppercase tracking-wider text-cream/60 mt-1">
+                    <div className="text-[10px] uppercase tracking-wider text-cream/60 mt-1.5">
                       Gifts Purchased So Far
                     </div>
 
-                    {totalItemsCount > 0 && (
-                      <div className="mt-3 pt-3 border-t border-cream/10">
-                        <div className="flex justify-between text-[10px] text-cream/70 mb-1">
-                          <span>Progress</span>
-                          <span>{purchasedPercentage}% of Wishlist Claimed</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-cream/20 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${purchasedPercentage}%` }}
-                            transition={{ duration: 1.2, ease: "easeOut" }}
-                            className="h-full bg-terracotta rounded-full"
-                          />
-                        </div>
+                    <div className="mt-3.5 pt-3.5 border-t border-cream/10">
+                      <div className="flex justify-between text-[10px] text-cream/70 mb-1.5">
+                        <span>Progress</span>
+                        <span>{purchasedPercentage}% of Wishlist Claimed</span>
                       </div>
-                    )}
+                      <div className="w-full h-1.5 bg-cream/20 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${purchasedPercentage}%` }}
+                          transition={{ duration: 1.2, ease: "easeOut" }}
+                          className="h-full bg-terracotta rounded-full"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <div className="pt-2">
                   <Link
                     href="/registry/items"
-                    className="w-full font-sans text-[10px] uppercase tracking-[0.2em] bg-terracotta text-cream px-8 py-3.5 rounded-sm hover:bg-cream hover:text-charcoal transition-colors font-medium shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full h-12 font-sans text-[10px] uppercase tracking-[0.2em] bg-terracotta text-cream px-8 rounded-sm hover:bg-cream hover:text-charcoal transition-colors font-medium shadow-sm cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span>{storeCard.button_text || "View Registry Items"}</span>
                     <ShoppingBag size={13} />

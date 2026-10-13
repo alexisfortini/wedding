@@ -30,6 +30,14 @@ gcloud services enable \
 # Default EXPORT_SECRET_KEY if not set in .env.local
 EXPORT_SECRET_KEY="${EXPORT_SECRET_KEY:-ap_sec_63b2120c11dccdc10159ae284379b01d}"
 
+# Sync .env.production for Next.js Docker build-time inlining
+cat <<EOF > .env.production
+# Auto-generated for Next.js production Docker build
+NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_MAPBOX_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
+EOF
+
 echo "3. Deploying Next.js website to Google Cloud Run..."
 gcloud run deploy wedding-website \
   --source . \

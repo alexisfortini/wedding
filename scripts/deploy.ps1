@@ -101,6 +101,16 @@ if (-not $ExportSecret) {
     $ExportSecret = "ap_sec_63b2120c11dccdc10159ae284379b01d"
 }
 
+# Sync .env.production for Next.js Docker build-time inlining
+$EnvProdFile = Join-Path $PSScriptRoot "..\.env.production"
+$EnvProdContent = @(
+    "# Auto-generated for Next.js production Docker build",
+    "NEXT_PUBLIC_SUPABASE_URL=$($env:NEXT_PUBLIC_SUPABASE_URL)",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY=$($env:NEXT_PUBLIC_SUPABASE_ANON_KEY)",
+    "NEXT_PUBLIC_MAPBOX_TOKEN=$($env:NEXT_PUBLIC_MAPBOX_TOKEN)"
+) -join "`n"
+Set-Content -Path $EnvProdFile -Value $EnvProdContent -Encoding UTF8
+
 Write-Host "1. Setting Google Cloud active project to: $ProjectId..." -ForegroundColor Green
 & gcloud config set project $ProjectId
 
