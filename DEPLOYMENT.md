@@ -30,6 +30,20 @@ The public URL and anonymous key must belong to the same project. The service-ro
 
 Supabase's dashboard offers upgrading the free project to prevent future pauses. Plan or billing changes require the owner's approval. The application retries transient reads once; it does not automatically repeat database writes.
 
+### Scheduled database activity
+
+Google Cloud Scheduler job `wedding-database-activity` in project `wedding-497923`, region `us-central1`, reads `/api/get-site-config?key=general` from the production Cloud Run service at 00:13, 06:13, 12:13, and 18:13 in `America/Los_Angeles`. The endpoint performs an uncached Supabase settings read. The job contains no credentials and changes no guest or RSVP data. It runs independently of a local computer or Codex subscription, with up to three retries after failures.
+
+Regular activity can reduce free-project pausing, but Supabase only guarantees no inactivity pauses on a paid plan. This job does not automatically resume a project that has already paused. Cloud Scheduler includes three free jobs per billing account; additional jobs are billed at the provider's current rate.
+
+View execution history in the [Cloud Scheduler console](https://console.cloud.google.com/cloudscheduler?project=wedding-497923). To stop the activity:
+
+```powershell
+gcloud scheduler jobs pause wedding-database-activity --project wedding-497923 --location us-central1
+```
+
+To restart it, replace `pause` with `resume`. The job is managed separately from website deployment, so normal releases do not recreate or disable it.
+
 ### The Deployment Script (`scripts/deploy.sh`)
 Running the script executes the complete build sequence:
 ```bash
