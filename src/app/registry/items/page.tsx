@@ -7,15 +7,21 @@ import {
   ArrowLeft, Gift, ExternalLink, Check, ShoppingBag,
   Loader2, CheckCircle2, X, ArrowRight, Heart
 } from "lucide-react";
-import { mockDatabase } from "@/lib/mockDatabase";
+import { giftPrice, giftStatus } from "@/lib/registry";
 import defaultRegistryConfig from "@config/ui/registry.json";
 
 import { useDialog } from "@/lib/useDialog";
-import AnimatedCounter from "@/components/AnimatedCounter";
 
 export default function RegistryItemsPage() {
   const [config, setConfig] = useState<any>(defaultRegistryConfig);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [view, setView] = useState<"gifts" | "stores">("gifts");
+  const [storeFilter, setStoreFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [budget, setBudget] = useState("All");
+  const [search, setSearch] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [loaded, setLoaded] = useState(false);
 
   // Claim modal state
   const [claimingItem, setClaimingItem] = useState<any | null>(null);
@@ -28,7 +34,18 @@ export default function RegistryItemsPage() {
   const dialogRef = useDialog(claimingItem !== null, closeClaim);
 
   useEffect(() => {
-    mockDatabase.getSiteConfig("registry", defaultRegistryConfig).then(setConfig);
+    let active = true;
+    const refresh = async () => {
+      try {
+        const response = await fetch("/api/registry", { cache: "no-store", signal: AbortSignal.timeout(15000) });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error("Unable to check the registry. Please refresh or visit a store registry.");
+        if (active) { setConfig(data.value); setLoaded(true); setLoadError(""); }
+      } catch (error) { if (active) setLoadError(error instanceof Error ? error.message : "Unable to check the registry."); }
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 60000);
+    window.addEventListener("focus", refresh);
 
     // Auto pre-fill guest name if session exists
     try {
@@ -42,6 +59,7 @@ export default function RegistryItemsPage() {
     } catch {
       // ignore
     }
+    return () => { active = false; clearInterval(timer); window.removeEventListener("focus", refresh); };
   }, []);
 
   const handleConfirmClaim = async () => {
@@ -63,8 +81,8 @@ export default function RegistryItemsPage() {
 
   const rawItems = config.items || (defaultRegistryConfig as any).items || [];
   const itemsList = useMemo(() => {
-    return rawItems.filter((item: any) => item.enabled !== false);
-  }, [rawItems]);
+    return loaded ? rawItems.filter((item: any) => item.enabled !== false) : [];
+  }, [rawItems, loaded]);
 
   const rawStores = config.stores || (defaultRegistryConfig as any).stores || [];
   const storesList = useMemo(() => {
@@ -72,10 +90,9 @@ export default function RegistryItemsPage() {
   }, [rawStores]);
 
   const purchasedItemsCount = useMemo(() => {
-    return itemsList.filter((item: any) => Boolean(item.is_purchased)).length;
+    return itemsList.filter((item: any) => ["purchased", "reported"].includes(giftStatus(item))).length;
   }, [itemsList]);
   const totalItemsCount = itemsList.length;
-  const purchasedPercentage = totalItemsCount > 0 ? Math.round((purchasedItemsCount / totalItemsCount) * 100) : 0;
 
   // Categories extracted from items
   const categories = useMemo(() => {
@@ -89,9 +106,15 @@ export default function RegistryItemsPage() {
   }, [itemsList]);
 
   const filteredItems = useMemo(() => {
-    if (selectedCategory === "All") return itemsList;
-    return itemsList.filter((item: any) => item.category?.trim().toLowerCase() === selectedCategory.toLowerCase());
-  }, [itemsList, selectedCategory]);
+    return itemsList.filter((item: any) => {
+      const price = giftPrice(item);
+      return (selectedCategory === "All" || item.category?.trim().toLowerCase() === selectedCategory.toLowerCase()) &&
+        (storeFilter === "All" || (item.store_name || item.store) === storeFilter) &&
+        (statusFilter === "All" || giftStatus(item) === statusFilter) &&
+        (budget === "All" || (price !== null && (budget === "under50" ? price < 50 : budget === "50to150" ? price >= 50 && price <= 150 : price > 150))) &&
+        `${item.title} ${item.description || ""} ${item.store_name || ""}`.toLowerCase().includes(search.toLowerCase());
+    });
+  }, [itemsList, selectedCategory, storeFilter, statusFilter, budget, search]);
 
   const mainCards = config.main_cards || (defaultRegistryConfig as any).main_cards || {};
   const storeCard = mainCards.store || {
@@ -100,8 +123,8 @@ export default function RegistryItemsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-cream text-charcoal py-12 md:py-20 px-4 sm:px-6 md:px-12">
-      <div className="max-w-6xl mx-auto space-y-10">
+    <main className="min-h-screen bg-cream text-charcoal py-8 md:py-12 px-4 sm:px-6 md:px-12">
+      <div className="max-w-6xl mx-auto space-y-6">
 
         {/* Navigation & Header */}
         <div>
@@ -127,34 +150,21 @@ export default function RegistryItemsPage() {
           </div>
         </div>
 
-        {/* Live Items Counter Banner */}
-        <div className="bg-surface border border-line rounded-sm p-6 sm:p-8 shadow-card text-center max-w-xl mx-auto">
-          <div className="text-muted text-xs font-sans uppercase tracking-label font-semibold mb-3">
-            <span>Wishlist Status</span>
-          </div>
-          <div className="text-4xl sm:text-5xl font-serif text-charcoal font-medium h-12 flex items-baseline justify-center gap-1.5 leading-none">
-            <AnimatedCounter value={purchasedItemsCount} />
-            <span className="text-xl sm:text-2xl text-muted font-normal">of {totalItemsCount}</span>
-          </div>
-          <div className="text-xs uppercase tracking-label text-muted mt-1.5">
-            Gifts Claimed So Far
-          </div>
-
-          <div className="mt-5 pt-5 border-t border-line max-w-md mx-auto">
-            <div className="flex justify-between text-xs text-charcoal/80 mb-1.5 font-medium">
-              <span>Progress</span>
-              <span>{purchasedPercentage}% of Wishlist Claimed</span>
-            </div>
-            <div className="w-full h-2 bg-cream/70 rounded-full overflow-hidden border border-line">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${purchasedPercentage}%` }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
-                className="h-full bg-terracotta rounded-full"
-              />
-            </div>
-          </div>
+        <div className="flex justify-center gap-2" aria-label="Registry view">
+          <button onClick={() => setView("gifts")} aria-pressed={view === "gifts"} className={`px-6 py-3 rounded-full border border-line ${view === "gifts" ? "bg-action text-cream" : "bg-surface"}`}>All Gifts</button>
+          <button onClick={() => setView("stores")} aria-pressed={view === "stores"} className={`px-6 py-3 rounded-full border border-line ${view === "stores" ? "bg-action text-cream" : "bg-surface"}`}>Shop by Store</button>
         </div>
+        {loadError && <p role="alert" className="text-center text-danger">{loadError}</p>}
+        {view === "gifts" && <>
+        {loaded && <p className="text-center text-sm text-muted">{totalItemsCount} gift ideas · {purchasedItemsCount} claimed</p>}
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 font-sans text-copy">
+          <label className="space-y-1">Search gifts<input aria-label="Search gifts" value={search} onChange={e => setSearch(e.target.value)} placeholder="Find something special" className="block w-full p-3 bg-surface border border-line rounded-sm" /></label>
+          <label className="space-y-1">Store<select aria-label="Filter by store" value={storeFilter} onChange={e => setStoreFilter(e.target.value)} className="block w-full p-3 bg-surface border border-line rounded-sm"><option value="All">All stores</option>{Array.from(new Set<string>(itemsList.map((item: any) => item.store_name || item.store).filter(Boolean))).sort().map(name => <option key={name}>{name}</option>)}</select></label>
+          <label className="space-y-1">Price<select aria-label="Filter by price" value={budget} onChange={e => setBudget(e.target.value)} className="block w-full p-3 bg-surface border border-line rounded-sm"><option value="All">All prices</option><option value="under50">Under $50</option><option value="50to150">$50–$150</option><option value="over150">Over $150</option></select></label>
+          <label className="space-y-1">Status<select aria-label="Filter by gift status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="block w-full p-3 bg-surface border border-line rounded-sm"><option value="All">All gifts</option><option value="available">Still needed</option><option value="reported">Reported gifted</option><option value="purchased">Purchased</option><option value="unavailable">Out of stock</option></select></label>
+        </div>
+        <p className="font-sans text-copy text-muted text-center">Please buy through the store registry so your gift is recorded there. Guest reports are confirmed separately; store updates can take time. Prices and availability are confirmed at checkout.</p>
 
         {/* Category Filters */}
         {categories.length > 2 && (
@@ -178,7 +188,7 @@ export default function RegistryItemsPage() {
         {/* Grid of Curated Items */}
         {itemsList.length === 0 ? (
           <div className="text-center py-16 bg-surface border border-line rounded-sm">
-            <p className="font-serif text-xl text-muted leading-relaxed">No registry items configured yet.</p>
+            <p className="font-serif text-xl text-muted leading-relaxed">{!loaded ? "Checking our gift list…" : "We're putting the finishing touches on our gift list. You can browse our store registries below."}</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -187,14 +197,15 @@ export default function RegistryItemsPage() {
                 <span>Curated Registry Items</span>
                 <span className="text-sm font-sans font-normal text-muted">({filteredItems.length})</span>
               </h3>
-              <span className="text-xs font-sans text-muted">Direct Links to Stores</span>
+              <span className="text-xs font-sans text-muted">Choose a gift, then shop the store registry</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
               {filteredItems.map((item: any) => {
-                const isPurchased = Boolean(item.is_purchased);
+                const status = giftStatus(item);
+                const isPurchased = status === "purchased" || (status === "reported" && (item.quantity_purchased ?? 0) + (item.guest_reported_quantity ?? 0) >= (item.quantity_requested ?? 1));
                 const storeName = item.store_name || item.store || "Store Registry";
-                const itemLink = item.item_url || item.url || "#";
+                const itemLink = item.registry_added && item.store_url ? item.store_url : item.item_url || item.url || "#";
                 const itemDescription = item.description || item.notes || "";
 
                 return (
@@ -230,12 +241,13 @@ export default function RegistryItemsPage() {
                       </span>
 
                       {/* Claimed Badge */}
-                      {isPurchased && (
+                      {(status === "purchased" || status === "reported") && (
                         <div className="absolute top-3 right-3 bg-success text-cream px-2.5 py-1 text-label font-sans uppercase tracking-label rounded-sm shadow-card flex items-center gap-1 font-semibold">
                           <Check size={11} />
-                          <span>Purchased</span>
+                          <span>{status === "purchased" ? "Purchased" : "Reported gifted"}</span>
                         </div>
                       )}
+                      {status === "unavailable" && <span className="absolute top-3 right-3 bg-surface text-muted px-2.5 py-1 text-label rounded-sm border border-line">Out of stock</span>}
                     </div>
 
                     {/* Middle: Title, Description & Price */}
@@ -257,6 +269,7 @@ export default function RegistryItemsPage() {
                           {item.category || ""}
                         </span>
                       </div>
+                      {(item.quantity_requested ?? 1) > 1 && <p className="mt-2 text-caption text-muted">{item.quantity_purchased ?? 0} of {item.quantity_requested} purchased at the store{item.guest_reported_quantity ? ` · ${item.guest_reported_quantity} reported by guests` : ""}</p>}
                     </div>
 
                     {/* Bottom: Action Buttons */}
@@ -264,9 +277,7 @@ export default function RegistryItemsPage() {
                       {isPurchased ? (
                         <div className="h-10 px-3 bg-success-soft border border-success-line rounded-sm flex items-center justify-between gap-2">
                           <span className="text-caption font-serif italic text-success truncate">
-                            {item.purchased_by
-                              ? `Gifted by ${item.purchased_by} ❤️`
-                              : "Marked as purchased"}
+                            {status === "purchased" ? "Purchased — thank you!" : "Reported · awaiting confirmation"}
                           </span>
                           {itemLink && itemLink !== "#" && (
                             <a
@@ -288,7 +299,7 @@ export default function RegistryItemsPage() {
                             rel="noopener noreferrer"
                             className="flex-1 basis-32 min-h-11 py-2 font-sans text-label uppercase tracking-normal bg-action text-cream px-3 rounded-sm hover:bg-action-hover transition-colors font-semibold text-center flex items-center justify-center gap-1.5 shadow-card group/btn whitespace-nowrap"
                           >
-                            <span>View & Buy</span>
+                            <span>{status === "unavailable" ? "Check Store" : item.registry_added ? "Shop Registry" : "View Gift"}</span>
                             <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 transition-transform shrink-0" />
                           </a>
 
@@ -300,7 +311,7 @@ export default function RegistryItemsPage() {
                             className="flex-1 basis-32 min-h-11 py-2 font-sans text-label uppercase tracking-normal bg-cream/30 hover:bg-cream/80 text-charcoal border border-line px-3 rounded-sm transition-colors font-semibold whitespace-nowrap cursor-pointer flex items-center justify-center"
                             title="Let us know you purchased this so others don't buy duplicate gifts"
                           >
-                            Mark Claimed
+                            I Bought This
                           </button>
                         </div>
                       )}
@@ -312,25 +323,27 @@ export default function RegistryItemsPage() {
           </div>
         )}
 
+        {itemsList.length > 0 && filteredItems.length === 0 && <p role="status" className="text-center text-muted">No gifts match these filters.</p>}
+        </>}
         {/* SECTION B: Partner Stores (if configured) */}
-        {storesList.length > 0 && (
+        {storesList.length > 0 && (view === "stores" || (loaded && itemsList.length === 0)) && (
           <div className="pt-8 border-t border-line space-y-6">
             <div className="text-center space-y-1">
               <h3 className="font-serif text-2xl text-charcoal text-balance">Partner Store Registries</h3>
-              <p className="font-sans text-copy text-muted">
-                You can also browse our full registered collections directly on these retailers.
-              </p>
+              <p className="font-sans text-copy text-muted">Browse our collections and check the latest gift availability at each store.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-stretch">
-              {storesList.map((store: any) => (
+              {storesList.filter((store: any) => store.url).map((store: any) => (
                 <a
                   key={store.name || store.url}
                   href={store.url || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-full min-h-[84px] p-5 bg-surface border border-line rounded-sm hover:border-terracotta/50 hover:shadow-card transition-all flex items-center justify-between group"
+                  className="h-full bg-surface border border-line rounded-sm overflow-hidden hover:border-terracotta/50 hover:shadow-card transition-all flex flex-col group"
                 >
+                  {store.cover_photo && <img src={store.cover_photo} alt="Kelsey and Alexis at Griffith Observatory" className="w-full h-36 object-cover object-[65%_45%]" />}
+                  <div className="p-5 flex flex-1 items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 shrink-0 rounded-full bg-cream/40 flex items-center justify-center text-charcoal/80 group-hover:text-action transition-colors">
                       <ShoppingBag size={18} />
@@ -339,12 +352,14 @@ export default function RegistryItemsPage() {
                       <h4 className="font-serif text-base text-charcoal font-medium group-hover:text-action transition-colors">
                         {store.name}
                       </h4>
+                      {store.guest_note && <p className="text-copy text-muted my-2 leading-relaxed">{store.guest_note}</p>}
                       <span className="text-label font-sans uppercase tracking-label text-muted">
                         View Complete Registry
                       </span>
                     </div>
                   </div>
                   <ExternalLink size={14} className="shrink-0 text-muted group-hover:text-action group-hover:translate-x-0.5 transition-all" />
+                  </div>
                 </a>
               ))}
             </div>
@@ -396,7 +411,7 @@ export default function RegistryItemsPage() {
                   <div className="w-14 h-14 mx-auto rounded-full bg-success-soft text-success flex items-center justify-center">
                     <CheckCircle2 size={32} />
                   </div>
-                  <h4 className="font-serif text-2xl text-charcoal">Marked as Purchased!</h4>
+                  <h4 className="font-serif text-2xl text-charcoal">Thank you for your gift!</h4>
                   <p className="font-sans text-copy text-charcoal/80 max-w-xs mx-auto leading-relaxed">
                     {claimSuccessMessage}
                   </p>
@@ -411,7 +426,7 @@ export default function RegistryItemsPage() {
                       </div>
                       <div>
                         <span className="font-sans text-label uppercase tracking-label text-success font-semibold block">Guest Self-Report</span>
-                        <h4 className="font-serif text-lg text-charcoal">Mark as Purchased</h4>
+                        <h4 className="font-serif text-lg text-charcoal">Report a Gift</h4>
                       </div>
                     </div>
                     <button
@@ -429,7 +444,7 @@ export default function RegistryItemsPage() {
                       Thank you so much! Did you purchase <strong className="font-serif text-lg text-charcoal font-semibold">{claimingItem.title}</strong>?
                     </p>
                     <p className="text-muted leading-relaxed">
-                      Marking this will update our live registry status so other guests know not to purchase duplicates.
+                      Only confirm after buying your gift. This records your report on our website; the couple will reconcile it with the store registry. It does not place an order or mark anything purchased at the store.
                     </p>
 
                     <div>
@@ -464,7 +479,7 @@ export default function RegistryItemsPage() {
                       ) : (
                         <>
                           <Check size={13} />
-                          <span>Confirm & Mark as Claimed</span>
+                          <span>Confirm I Bought This</span>
                         </>
                       )}
                     </button>

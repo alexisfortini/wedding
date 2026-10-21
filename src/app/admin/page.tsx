@@ -1885,6 +1885,7 @@ export default function AdminPage() {
 
     return (
       <div className="space-y-8">
+        <Link href="/admin/registry" className="inline-flex p-3 bg-action text-cream rounded-sm">Manage Registry Connections & Gift Reports</Link>
         {/* General Section Settings */}
         <div className="bg-cream/15 border border-sage/15 p-5 rounded-sm space-y-4">
           <div className="flex items-center justify-between border-b border-sage/15 pb-2">
@@ -2587,6 +2588,9 @@ export default function AdminPage() {
                             checked={Boolean(item.is_purchased)}
                             onChange={e => {
                               updateRegistryItem(idx, "is_purchased", e.target.checked);
+                              updateRegistryItem(idx, "purchase_source", "admin");
+                              updateRegistryItem(idx, "quantity_purchased", e.target.checked ? item.quantity_requested || 1 : 0);
+                              updateRegistryItem(idx, "guest_reported_quantity", 0);
                               if (!e.target.checked) {
                                 updateRegistryItem(idx, "purchased_by", null);
                                 updateRegistryItem(idx, "purchased_at", null);
@@ -2698,6 +2702,10 @@ export default function AdminPage() {
                       className="w-full border border-sage/25 p-1.5 text-xs outline-none focus:border-sage rounded-sm"
                       placeholder="Premium cookware and tabletop..."
                     />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-[9px] uppercase tracking-widest text-charcoal/40 mb-1 font-semibold">Personal Guest Note (Website)</label>
+                    <textarea value={store.guest_note || ""} onChange={e => updateRegistryStore(idx, "guest_note", e.target.value)} maxLength={300} className="w-full border border-sage/25 p-2 text-xs outline-none rounded-sm" />
                   </div>
                   <div className="flex items-center pt-4">
                     <label className="flex items-center gap-2 text-xs font-sans text-charcoal/70 cursor-pointer">

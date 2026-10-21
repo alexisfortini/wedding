@@ -10,6 +10,7 @@ import registryConfigDefault from "@config/ui/registry.json";
 import imagesConfigDefault from "@config/ui/images.json";
 
 import AnimatedCounter from "@/components/AnimatedCounter";
+import { giftStatus } from "@/lib/registry";
 
 export default function Registry() {
   const [config, setConfig] = useState<any>(registryConfigDefault);
@@ -17,6 +18,7 @@ export default function Registry() {
   const [fundStatus, setFundStatus] = useState<string | null>("Loading gift total…");
   const [totalRaised, setTotalRaised] = useState<number>(0);
   const [targetAmount, setTargetAmount] = useState<number>(5000);
+  const [registryLoaded, setRegistryLoaded] = useState(false);
 
   const loadContributions = useCallback(() => {
     mockDatabase.getFundContributions().then((res) => {
@@ -27,7 +29,13 @@ export default function Registry() {
   }, []);
 
   useEffect(() => {
-    mockDatabase.getSiteConfig("registry", registryConfigDefault).then(setConfig);
+    fetch("/api/registry", { cache: "no-store", signal: AbortSignal.timeout(15000) })
+      .then(async response => {
+        if (!response.ok) throw new Error("Registry unavailable");
+        const data = await response.json();
+        if (!data.success) throw new Error("Registry unavailable");
+        setConfig(data.value); setRegistryLoaded(true);
+      }).catch(() => setRegistryLoaded(false));
     mockDatabase.getSiteConfig("images", imagesConfigDefault).then(setImagesConfig);
     loadContributions();
   }, [loadContributions]);
@@ -60,7 +68,7 @@ export default function Registry() {
   };
 
   const purchasedItemsCount = useMemo(() => {
-    return itemsList.filter((item: any) => Boolean(item.is_purchased)).length;
+    return itemsList.filter((item: any) => ["purchased", "reported"].includes(giftStatus(item))).length;
   }, [itemsList]);
   const totalItemsCount = itemsList.length;
   const purchasedPercentage = totalItemsCount > 0 ? Math.round((purchasedItemsCount / totalItemsCount) * 100) : 0;
@@ -205,7 +213,7 @@ export default function Registry() {
                   </p>
 
                   {/* Prominent Live Items Counter Display */}
-                  <div className="mt-auto mb-6 pt-5 border-t border-cream/20 w-full max-w-xs mx-auto">
+                  {registryLoaded ? <div className="mt-auto mb-6 pt-5 border-t border-cream/20 w-full max-w-xs mx-auto">
                     <div className="flex items-center justify-center gap-1.5 mb-2 text-label uppercase tracking-label text-cream/90 font-semibold">
                       <span>Wishlist Status</span>
                     </div>
@@ -214,7 +222,7 @@ export default function Registry() {
                       <span className="text-xl md:text-2xl text-cream/90 font-normal">of {totalItemsCount}</span>
                     </div>
                     <div className="text-label uppercase tracking-label text-cream/90 mt-1.5">
-                      Gifts Purchased So Far
+                      Gifts Claimed So Far
                     </div>
 
                     <div className="mt-5">
@@ -231,7 +239,7 @@ export default function Registry() {
                         />
                       </div>
                     </div>
-                  </div>
+                  </div> : <p className="text-cream/80 my-5">Check the gift list or store registries for current availability.</p>}
                 </div>
 
                 <div className="pt-2">

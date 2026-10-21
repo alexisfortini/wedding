@@ -51,7 +51,9 @@ export async function requireAdmin(req: Request, db: ServerDatabase) {
   if (!await isAdminRequest(req, db)) throw new ApiError("Please sign in to the admin portal again.", 401);
 }
 
-/** Compare the whole JSON value so simultaneous guest writes cannot erase each other. */
+/** Compare the revision so simultaneous guest writes cannot erase each other.
+ * Filtering by the entire catalog can exceed the database gateway's URL limit.
+ */
 export async function updateConfig(db: ServerDatabase, key: string, fallback: any, change: (value: any) => any) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const row = await readConfig(db, key);
@@ -63,8 +65,9 @@ export async function updateConfig(db: ServerDatabase, key: string, fallback: an
       if (error.code === "23505") continue;
       throw new ApiError("Your change could not be saved. Please try again.");
     }
-    const { data, error } = await db.from("site_configs").update(payload)
-      .eq("key", key).eq("value", JSON.stringify(row.value)).select("key");
+    let query = db.from("site_configs").update(payload).eq("key", key);
+    query = row.updated_at ? query.eq("updated_at", row.updated_at) : query.is("updated_at", null);
+    const { data, error } = await query.select("key");
     if (error) throw new ApiError("Your change could not be saved. Please try again.");
     if (data?.length) return next;
   }

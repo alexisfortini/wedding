@@ -1,5 +1,7 @@
 "use client";
 
+const registryRevisions = new Map<string, string | null>();
+
 import { supabase } from "./supabase";
 import { lookupGuest } from "./guestLookup";
 
@@ -250,6 +252,7 @@ export const mockDatabase = {
         if (!res.ok) throw new Error("Configuration unavailable");
         const data = await res.json();
         if (!data.success) throw new Error("Configuration unavailable");
+        if (key === "registry" && passcode && "revision" in data) registryRevisions.set(passcode, data.revision);
         return data.value;
       }).finally(() => configRequests.delete(requestKey));
       configRequests.set(requestKey, request);
@@ -266,12 +269,13 @@ export const mockDatabase = {
         "Content-Type": "application/json",
         "x-admin-passcode": passcode
       },
-      body: JSON.stringify({ key, value })
+      body: JSON.stringify({ key, value, ...(key === "registry" ? { expectedRevision: registryRevisions.get(passcode) } : {}) })
     });
     const data = await res.json();
     if (!data.success) {
       throw new Error(data.error || "Failed to save configuration");
     }
+    if (key === "registry" && "revision" in data) registryRevisions.set(passcode, data.revision);
   },
 
   getFundContributions: async (): Promise<{ contributions: FundContribution[]; totalRaised: number; targetAmount: number; initialRaised: number }> => {
