@@ -478,7 +478,8 @@ export default function RegistryItemsPage() {
                 const status = giftStatus(item);
                 const isPurchased = status === "purchased" || (status === "reported" && (item.quantity_purchased ?? 0) + (item.guest_reported_quantity ?? 0) >= (item.quantity_requested ?? 1));
                 const storeName = item.store_name || item.store || "Store Registry";
-                const itemLink = item.item_url || item.url || item.store_url || "#";
+                const registryLink = item.store_url || item.item_url || item.url || "#";
+                const productLink = item.item_url && item.item_url !== registryLink ? item.item_url : null;
                 const itemDescription = item.description || item.notes || "";
 
                 return (
@@ -552,9 +553,9 @@ export default function RegistryItemsPage() {
                           <span className="text-caption font-serif italic text-success truncate">
                             {status === "purchased" ? "Purchased — thank you!" : "Reported · awaiting confirmation"}
                           </span>
-                          {itemLink && itemLink !== "#" && (
+                          {registryLink && registryLink !== "#" && (
                             <a
-                              href={itemLink}
+                              href={registryLink}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="shrink-0 text-label uppercase tracking-label text-success hover:text-charcoal font-sans font-semibold transition-colors flex items-center gap-1"
@@ -565,27 +566,41 @@ export default function RegistryItemsPage() {
                           )}
                         </div>
                       ) : (
-                        <div className="flex flex-wrap gap-2">
-                          <a
-                            href={itemLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 basis-32 min-h-11 py-2 font-sans text-label uppercase tracking-normal bg-action text-cream px-3 rounded-sm hover:bg-action-hover transition-colors font-semibold text-center flex items-center justify-center gap-1.5 shadow-card group/btn whitespace-nowrap"
-                          >
-                            <span>{status === "unavailable" ? "Check Store" : "View Gift"}</span>
-                            <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 transition-transform shrink-0" />
-                          </a>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            <a
+                              href={registryLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 basis-32 min-h-11 py-2 font-sans text-label uppercase tracking-normal bg-action text-cream px-3 rounded-sm hover:bg-action-hover transition-colors font-semibold text-center flex items-center justify-center gap-1.5 shadow-card group/btn whitespace-nowrap"
+                            >
+                              <span>{status === "unavailable" ? "Check Registry" : "Buy on Registry"}</span>
+                              <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 transition-transform shrink-0" />
+                            </a>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setClaimingItem(item);
-                            }}
-                            className="flex-1 basis-32 min-h-11 py-2 font-sans text-label uppercase tracking-normal bg-cream/30 hover:bg-cream/80 text-charcoal border border-line px-3 rounded-sm transition-colors font-semibold whitespace-nowrap cursor-pointer flex items-center justify-center"
-                            title="Let us know you purchased this so others don't buy duplicate gifts"
-                          >
-                            I Bought This
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setClaimingItem(item);
+                              }}
+                              className="flex-1 basis-32 min-h-11 py-2 font-sans text-label uppercase tracking-normal bg-cream/30 hover:bg-cream/80 text-charcoal border border-line px-3 rounded-sm transition-colors font-semibold whitespace-nowrap cursor-pointer flex items-center justify-center"
+                              title="Let us know you purchased this so others don't buy duplicate gifts"
+                            >
+                              I Bought This
+                            </button>
+                          </div>
+                          {productLink && (
+                            <div className="text-center pt-0.5">
+                              <a
+                                href={productLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-caption text-muted hover:text-charcoal underline underline-offset-2 transition-colors font-sans"
+                              >
+                                View product specs & photos
+                              </a>
+                            </div>
+                          )}
                         </div>
                       )}
 
