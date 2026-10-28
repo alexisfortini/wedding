@@ -70,7 +70,7 @@ export default function Home() {
       <TheWeekend guest={guest} />
       <DJLineup />
       <RestAndRecharge />
-      <Registry />
+      <Registry isAdmin={isAdmin} />
       <FAQ />
       <RSVPForm guest={guest} />
 

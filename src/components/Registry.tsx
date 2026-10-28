@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Heart, Gift } from "lucide-react";
+import { Heart, Gift, Plus } from "lucide-react";
 import { mockDatabase } from "@/lib/mockDatabase";
 import BackgroundPhoto from "./BackgroundPhoto";
 import registryConfigDefault from "@config/ui/registry.json";
@@ -12,7 +12,7 @@ import imagesConfigDefault from "@config/ui/images.json";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import { giftStatus } from "@/lib/registry";
 
-export default function Registry() {
+export default function Registry({ isAdmin = false }: { isAdmin?: boolean }) {
   const [config, setConfig] = useState<any>(registryConfigDefault);
   const [imagesConfig, setImagesConfig] = useState(imagesConfigDefault);
   const [fundStatus, setFundStatus] = useState<string | null>("Loading gift total…");
@@ -242,13 +242,22 @@ export default function Registry() {
                   </div> : <p className="text-cream/80 my-5">Check the gift list or store registries for current availability.</p>}
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-2 space-y-2.5">
                   <Link
                     href="/registry/items"
                     className="w-full min-h-12 py-3 font-sans text-label uppercase tracking-label bg-action text-cream px-4 rounded-sm hover:bg-action-hover transition-colors font-medium shadow-card cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span>{storeCard.button_text || "View Registry Items"}</span>
                   </Link>
+                  {isAdmin && (
+                    <Link
+                      href="/registry/items?add=1"
+                      className="w-full min-h-10 py-2 font-sans text-label uppercase tracking-label bg-cream/15 hover:bg-cream text-cream hover:text-charcoal border border-cream/30 px-4 rounded-sm transition-colors font-semibold cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <Plus size={14} />
+                      <span>Add / Edit Registry Items</span>
+                    </Link>
+                  )}
                 </div>
               </motion.div>
             )}

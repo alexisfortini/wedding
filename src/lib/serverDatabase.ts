@@ -41,10 +41,27 @@ export async function readConfig(db: ServerDatabase, key: string) {
 
 export async function isAdminRequest(req: Request, db: ServerDatabase) {
   const supplied = req.headers.get("x-admin-passcode");
-  if (!supplied) return false;
+  const guestId = req.headers.get("x-admin-guest-id");
+  if (!supplied && !guestId) return false;
   const row = await readConfig(db, "admin");
-  const expected = row ? row.value?.passcode : adminDefaults.passcode;
-  return typeof expected === "string" && expected.length > 0 && supplied === expected;
+  const adminConfig = row ? row.value : adminDefaults;
+  const expected = adminConfig?.passcode ?? adminDefaults.passcode;
+  if (supplied && typeof expected === "string" && expected.length > 0 && supplied === expected) {
+    return true;
+  }
+  if (guestId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(guestId)) {
+    const { data: guest } = await db.from("guests").select("first_name, last_name").eq("id", guestId).maybeSingle();
+    const admins = Array.isArray(adminConfig?.admins) ? adminConfig.admins : adminDefaults.admins;
+    if (guest && Array.isArray(admins)) {
+      const first = (guest.first_name || "").toLowerCase().trim();
+      const last = (guest.last_name || "").toLowerCase().trim();
+      return admins.some((a: any) =>
+        (a.first || "").toLowerCase().trim() === first &&
+        (a.last || "").toLowerCase().trim() === last
+      );
+    }
+  }
+  return false;
 }
 
 export async function requireAdmin(req: Request, db: ServerDatabase) {
