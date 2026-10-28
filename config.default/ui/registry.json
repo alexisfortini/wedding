@@ -210,7 +210,9 @@
       "enabled": true,
       "category": "Home",
       "item_url": "https://www.itouchless.com/products/13-gallon-50-liter-platinum-edition-stainless-steel-sensor-kitchen-trash-can?variant=35133430136993",
+      "store_id": "target",
       "image_url": "https://www.itouchless.com/cdn/shop/products/1_5cf53a42-d667-4081-bcf7-7aa874e3be43.jpg?v=1628789341&width=1200",
+      "store_url": "https://www.target.com/gift-registry/gift/9b4faf20-ccdf-11f1-b189-8f8647225e1e",
       "setup_note": "Original IT13RX Platinum model retained. Manufacturer is sold out; the suggested Target listing has not been verified as the same model.",
       "store_name": "Target",
       "description": "IT13RX · 50L stainless steel with odor filter",
@@ -221,9 +223,7 @@
       "reference_price": "$101.47",
       "quantity_purchased": 0,
       "quantity_requested": 1,
-      "guest_reported_quantity": 0,
-      "store_id": "target",
-      "store_url": "https://www.target.com/gift-registry/gift/9b4faf20-ccdf-11f1-b189-8f8647225e1e"
+      "guest_reported_quantity": 0
     },
     {
       "id": "gift-11",
@@ -260,7 +260,9 @@
       "enabled": true,
       "category": "Bedding",
       "item_url": "https://www.annalinens.co/products/bedding-gusseted-pillow-premium-quality-side-back-sleepers?variant=32573870506064",
+      "store_id": "target",
       "image_url": "https://www.annalinens.co/cdn/shop/products/bedding-gusseted-pillow-2-pack-premium-quality-side-back-sleepers-9324471.jpg?v=1771871274&width=1946",
+      "store_url": "https://www.target.com/gift-registry/gift/9b4faf20-ccdf-11f1-b189-8f8647225e1e",
       "setup_note": "Original product retained; retailer registration pending verification",
       "store_name": "Target",
       "description": "2-pack · Gusseted pillows for side and back sleepers",
@@ -270,9 +272,7 @@
       "reference_price": "$54.95",
       "quantity_purchased": 0,
       "quantity_requested": 1,
-      "guest_reported_quantity": 0,
-      "store_id": "target",
-      "store_url": "https://www.target.com/gift-registry/gift/9b4faf20-ccdf-11f1-b189-8f8647225e1e"
+      "guest_reported_quantity": 0
     },
     {
       "id": "gift-13",
@@ -281,7 +281,9 @@
       "enabled": true,
       "category": "Outdoors",
       "item_url": "https://www.selkirk.com/products/slk-evo-power-green-bundle?variant=44517561335910",
+      "store_id": "myregistry",
       "image_url": "https://www.selkirk.com/cdn/shop/files/vertical_png_1500x2000-PDP-Selkirk-SLK-EVO-XL-Power-Pickleball-Bundle-St-Paddys-05.png?v=1771257587&width=1200",
+      "store_url": "https://www.myregistry.com/wedding-registry/alexis-fortini-and-kelsey-hartfelder-/5692339",
       "setup_note": "Original product retained; retailer registration pending verification",
       "store_name": "Selkirk (via Universal)",
       "description": "EVO Power XL · Two paddles with a bag",
@@ -291,9 +293,7 @@
       "reference_price": "$100",
       "quantity_purchased": 0,
       "quantity_requested": 1,
-      "guest_reported_quantity": 0,
-      "store_id": "myregistry",
-      "store_url": "https://www.myregistry.com/wedding-registry/alexis-fortini-and-kelsey-hartfelder-/5692339"
+      "guest_reported_quantity": 0
     },
     {
       "id": "gift-14",
@@ -302,7 +302,9 @@
       "enabled": true,
       "category": "Dining",
       "item_url": "https://thebasketry.com/products/tan-marble-coaster-set?variant=44859723907279",
+      "store_id": "myregistry",
       "image_url": "https://thebasketry.com/cdn/shop/files/42500213.jpg?v=1788982625&width=1080",
+      "store_url": "https://www.myregistry.com/wedding-registry/alexis-fortini-and-kelsey-hartfelder-/5692339",
       "setup_note": "Original product retained; retailer registration pending verification",
       "store_name": "The Basketry (via Universal)",
       "description": "Tan marble · Coaster set",
@@ -312,9 +314,7 @@
       "reference_price": "$25",
       "quantity_purchased": 0,
       "quantity_requested": 1,
-      "guest_reported_quantity": 0,
-      "store_id": "myregistry",
-      "store_url": "https://www.myregistry.com/wedding-registry/alexis-fortini-and-kelsey-hartfelder-/5692339"
+      "guest_reported_quantity": 0
     },
     {
       "id": "gift-16",
@@ -323,7 +323,9 @@
       "enabled": true,
       "category": "Home",
       "item_url": "https://www.framebridge.com/products/black-and-gold-large-tabletop-frame?variant=50251042619707",
+      "store_id": "myregistry",
       "image_url": "https://www.framebridge.com/cdn/shop/files/2025_Black_Gold_Large_Tabletop_No_Mat_Angled_2-Box-F_1.png?v=1770329186&width=1070",
+      "store_url": "https://www.myregistry.com/wedding-registry/alexis-fortini-and-kelsey-hartfelder-/5692339",
       "setup_note": "Original product retained; retailer registration pending verification",
       "store_name": "Framebridge (via Universal)",
       "description": "Black and gold · 8×10 frame",
@@ -333,9 +335,7 @@
       "reference_price": "$70",
       "quantity_purchased": 0,
       "quantity_requested": 1,
-      "guest_reported_quantity": 0,
-      "store_id": "myregistry",
-      "store_url": "https://www.myregistry.com/wedding-registry/alexis-fortini-and-kelsey-hartfelder-/5692339"
+      "guest_reported_quantity": 0
     },
     {
       "id": "gift-17",
@@ -344,7 +344,9 @@
       "enabled": true,
       "category": "Home",
       "item_url": "https://www.jonopandolfi.com/products/everyday-vase?variant=41040250863768",
+      "store_id": "myregistry",
       "image_url": "https://www.jonopandolfi.com/cdn/shop/products/EVERYDAYVASE_DRKBRN_MOSS_FF_300x300.png?v=1657910671",
+      "store_url": "https://www.myregistry.com/wedding-registry/alexis-fortini-and-kelsey-hartfelder-/5692339",
       "setup_note": "Original product retained; retailer registration pending verification",
       "store_name": "Jono Pandolfi (via Universal)",
       "description": "Dark Brown/Moss · Handmade ceramic vase",
@@ -354,9 +356,7 @@
       "reference_price": "$97",
       "quantity_purchased": 0,
       "quantity_requested": 1,
-      "guest_reported_quantity": 0,
-      "store_id": "myregistry",
-      "store_url": "https://www.myregistry.com/wedding-registry/alexis-fortini-and-kelsey-hartfelder-/5692339"
+      "guest_reported_quantity": 0
     },
     {
       "id": "gift-18",
@@ -365,7 +365,9 @@
       "enabled": true,
       "category": "Dining",
       "item_url": "https://www.lenox.com/products/butterfly-meadow-r-salad-bowl-and-servers?variant=29971241074785",
+      "store_id": "myregistry",
       "image_url": "https://www.lenox.com/cdn/shop/products/820581_w10_3ef9ea09-7dec-4355-83f9-73ec8bc4fbfd.jpg?v=1760105981&width=1200",
+      "store_url": "https://www.myregistry.com/wedding-registry/alexis-fortini-and-kelsey-hartfelder-/5692339",
       "setup_note": "Original product retained; retailer registration pending verification",
       "store_name": "Lenox (via Universal)",
       "description": "Butterfly Meadow · Porcelain bowl and wood servers",
@@ -376,9 +378,7 @@
       "reference_price": "$87.95",
       "quantity_purchased": 0,
       "quantity_requested": 1,
-      "guest_reported_quantity": 0,
-      "store_id": "myregistry",
-      "store_url": "https://www.myregistry.com/wedding-registry/alexis-fortini-and-kelsey-hartfelder-/5692339"
+      "guest_reported_quantity": 0
     },
     {
       "id": "gift-19",
@@ -387,6 +387,7 @@
       "enabled": true,
       "category": "Experiences",
       "item_url": "https://store.usgs.gov/pass",
+      "store_id": "myregistry",
       "image_url": "https://prod-ibis-green.s3.us-west-2.amazonaws.com/drupal9-production/public/images/2025-12/2026_ResidentAnnual_Front.png",
       "store_url": "https://www.myregistry.com/wedding-registry/alexis-fortini-and-kelsey-hartfelder-/5692339",
       "setup_note": "2026 pass does not match the 2027 wedding year. Confirm a suitable pass before enabling.",
@@ -398,8 +399,7 @@
       "reference_price": "$80.00",
       "quantity_purchased": 0,
       "quantity_requested": 1,
-      "guest_reported_quantity": 0,
-      "store_id": "myregistry"
+      "guest_reported_quantity": 0
     },
     {
       "id": "gift-20",
@@ -409,7 +409,7 @@
       "category": "Home",
       "item_url": "https://www.westelm.com/products/scalloped-marble-trays-d17028/",
       "store_id": "west-elm",
-      "image_url": "https://assets.weimgs.com/weimgs/rk/images/wcm/products/202620/0034/img12b.jpg",
+      "image_url": "https://assets.pbimgs.com/pbimgs/rk/images/dp/wcm/202621/0011/scallop-marble-tray-l.jpg",
       "store_url": "https://www.westelm.com/registry/56gftcnfpv/registry-list.html",
       "store_name": "West Elm",
       "description": "Honed natural travertine marble decorative tray with curved scalloped edge. Perfect for coffee table, vanity, or bar styling.",
@@ -446,6 +446,7 @@
       "enabled": true,
       "category": "Experiences",
       "item_url": "https://www.airbnb.com/giftcards",
+      "store_id": "target",
       "image_url": "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80",
       "store_url": "https://www.target.com/gift-registry/gift/9b4faf20-ccdf-11f1-b189-8f8647225e1e",
       "store_name": "Airbnb (via Target)",
@@ -455,8 +456,7 @@
       "reference_price": "$250.00",
       "quantity_purchased": 0,
       "quantity_requested": 1,
-      "guest_reported_quantity": 0,
-      "store_id": "target"
+      "guest_reported_quantity": 0
     },
     {
       "id": "gift-23",
